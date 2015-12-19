@@ -1,0 +1,11 @@
+name: SuffixCommands
+main: com.minetexas.suffixcommands.SuffixCommands
+version: 0.1
+author: ataranlen
+description: Simple Suffix Commands for User selectable pexPermission Suffixes
+
+commands:
+  badge:
+    description: Change your badge to one that you own.
+    permission: suffixcommands.badge.set
+    permission-message: You are not allowed to change your own badge

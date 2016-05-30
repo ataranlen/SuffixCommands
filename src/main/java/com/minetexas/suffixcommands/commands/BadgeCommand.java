@@ -86,6 +86,9 @@ public class BadgeCommand extends CommandBase {
 			sendMessage(sender, SCColor.Green+"Granted '"+player+"' access to badge '"+badge.name+"': "+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
 			String command = "pex user "+player+" add "+SCSettings.PERMISSION_BASE+badge.name;
 			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+
+			String chatCommand = "pex user "+player+" add "+SCSettings.PERMISSION_CHAT+badge.name;
+			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), chatCommand);
 			
 		} else {
 			sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.name+"' Badge Group.");
@@ -116,6 +119,9 @@ public class BadgeCommand extends CommandBase {
 			sendMessage(sender, SCColor.Green+"Removed "+player+"'s access to badge '"+badge.name+"': "+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
 			String command = "pex user "+player+" remove "+SCSettings.PERMISSION_BASE+badge.name;
 			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+
+			String chatCommand = "pex user "+player+" remove "+SCSettings.PERMISSION_CHAT+badge.name;
+			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), chatCommand);
 			
 		} else {
 			sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.name+"' Badge Group.");

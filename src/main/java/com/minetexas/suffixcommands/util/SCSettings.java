@@ -24,13 +24,18 @@ public class SCSettings {
 	public static final String BADGE = "suffixcommands.badge.set";
 	public static final String GROUP_BASE = "suffixcommands.badgegroup.";
 	public static final String PERMISSION_BASE = "suffixcommands.badge.";
+	public static final String PERMISSION_CHAT = "suffixcommands.chat.";
+	
+	public static Boolean hasHerochat = false;
 	
 	public static FileConfiguration badgeConfig; /* badges.yml */
 	public static Map<String, ConfigBadges> badges = new HashMap<String, ConfigBadges>();
 	
 	public static void init(SuffixCommands plugin) throws FileNotFoundException, IOException, InvalidConfigurationException, InvalidConfiguration {
 		SCSettings.plugin = plugin;
-		
+
+		SCSettings.hasHerochat = plugin.hasPlugin("Herochat");
+		SCLog.debug("Herochat enabled? "+SCSettings.hasHerochat);
 		loadConfigFiles();
 		loadConfigObjects();
 	}

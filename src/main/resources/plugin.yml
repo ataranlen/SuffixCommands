@@ -1,6 +1,6 @@
 name: SuffixCommands
 main: com.minetexas.suffixcommands.SuffixCommands
-version: 0.3
+version: 0.4
 author: ataranlen
 description: Simple Suffix Commands for User selectable pexPermission Suffixes
 

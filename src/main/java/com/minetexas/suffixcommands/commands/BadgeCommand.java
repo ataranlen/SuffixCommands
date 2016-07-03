@@ -23,6 +23,8 @@ public class BadgeCommand extends CommandBase {
 		commands.put("set", "Change your badge to one you own");
 		commands.put("give", "Grant a player access to a group badge");
 		commands.put("take", "Remove a player's access to a group badge");
+		commands.put("share", "Grant a player access to give a group badge");
+		commands.put("leave", "Leave a group badge");
 		commands.put("remove", "Remove your current badge");
 		commands.put("owned", "List all your owned badges");
 		commands.put("group", "List all your group badges");
@@ -45,8 +47,9 @@ public class BadgeCommand extends CommandBase {
 			throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
 		}
 		
-		if (permissionCheck(SCSettings.PERMISSION_BASE+badge.name) || permissionCheck(SCSettings.GROUP_BASE+badge.name)) {
-			
+		if (permissionCheck(SCSettings.PERMISSION_BASE+badge.name)
+				|| permissionCheck(SCSettings.GROUPSHARE_BASE+badge.name)
+				|| permissionCheck(SCSettings.GROUP_BASE+badge.name)) {
 			Player player;
 			try {
 				player = getPlayer();
@@ -81,7 +84,7 @@ public class BadgeCommand extends CommandBase {
 		
 		String player = args[2];
 		
-		if (permissionCheck(SCSettings.GROUP_BASE+badge.name)) {
+		if (permissionCheck(SCSettings.GROUP_BASE+badge.name) || permissionCheck(SCSettings.GROUPSHARE_BASE+badge.name)) {
 			
 			sendMessage(sender, SCColor.Green+"Granted '"+player+"' access to badge '"+badge.name+"': "+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
 			String command = "pex user "+player+" add "+SCSettings.PERMISSION_BASE+badge.name;
@@ -89,6 +92,42 @@ public class BadgeCommand extends CommandBase {
 
 			String chatCommand = "pex user "+player+" add "+SCSettings.PERMISSION_CHAT+badge.name;
 			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), chatCommand);
+			
+		} else {
+			sendMessage(sender, SCColor.Red+"You don't have access to give the '"+badge.name+"' Badge Group.");
+		}
+	}
+	
+	public void share_cmd() throws SCException {		
+		if (args.length < 2) {
+			throw new SCException("Enter a Badge Name");
+		}
+		if (args.length < 3) {
+			throw new SCException("Enter a Player Name");
+		}
+		if (args.length > 3) {
+			throw new SCException("Invalid Badge Name. Use /badge share [name] [player]");
+		}
+		
+		ConfigBadges badge = SCSettings.badges.get(args[1]);
+		if (badge == null)
+		{
+			throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
+		}
+		
+		String player = args[2];
+		
+		if (permissionCheck(SCSettings.GROUP_BASE+badge.name)) {
+			
+			sendMessage(sender, SCColor.Green+"Granted '"+player+"' share access to badge '"+badge.name+"': "+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
+			String command = "pex user "+player+" add "+SCSettings.PERMISSION_BASE+badge.name;
+			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+
+			String chatCommand = "pex user "+player+" add "+SCSettings.PERMISSION_CHAT+badge.name;
+			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), chatCommand);
+
+			String shareCommand = "pex user "+player+" add "+SCSettings.GROUPSHARE_BASE+badge.name;
+			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), shareCommand);
 			
 		} else {
 			sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.name+"' Badge Group.");
@@ -115,14 +154,66 @@ public class BadgeCommand extends CommandBase {
 		String player = args[2];
 		
 		if (permissionCheck(SCSettings.GROUP_BASE+badge.name)) {
-			
 			sendMessage(sender, SCColor.Green+"Removed "+player+"'s access to badge '"+badge.name+"': "+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
 			String command = "pex user "+player+" remove "+SCSettings.PERMISSION_BASE+badge.name;
 			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
 
 			String chatCommand = "pex user "+player+" remove "+SCSettings.PERMISSION_CHAT+badge.name;
 			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), chatCommand);
+
+			String shareCommand = "pex user "+player+" remove "+SCSettings.GROUPSHARE_BASE+badge.name;
+			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), shareCommand);
 			
+			String clearSuffix = "pex user "+player+" suffix \"\"";
+			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
+			
+		} else {
+			sendMessage(sender, SCColor.Red+"You don't have access to share the '"+badge.name+"' Badge Group.");
+		}
+	}
+	
+	public void leave_cmd() throws SCException {		
+		if (args.length < 2) {
+			throw new SCException("Enter a Badge Name");
+		}
+		if (args.length > 2) {
+			throw new SCException("Invalid Badge Name. Use /badge leave [name]");
+		}
+		
+		ConfigBadges badge = SCSettings.badges.get(args[1]);
+		if (badge == null)
+		{
+			throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
+		}
+		
+		if (permissionCheck(SCSettings.GROUP_BASE+badge.name)) {
+
+			sendMessage(sender, SCColor.Red+"You are the leader of the '"+badge.name+"' Badge Group. You cannot leave.");
+		} else if (permissionCheck(SCSettings.PERMISSION_CHAT+badge.name) || permissionCheck(SCSettings.GROUPSHARE_BASE+badge.name)) {
+			Player player;
+			try {
+				player = getPlayer();
+				sendMessage(sender, SCColor.LightGreen+"Badge removed");
+			
+			
+				sendMessage(sender, SCColor.Green+"Removed "+player.getName()+"'s access to badge '"+badge.name+"': "+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
+				String command = "pex user "+player.getName()+" remove "+SCSettings.PERMISSION_BASE+badge.name;
+				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+	
+				String chatCommand = "pex user "+player.getName()+" remove "+SCSettings.PERMISSION_CHAT+badge.name;
+				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), chatCommand);
+	
+				String shareCommand = "pex user "+player.getName()+" remove "+SCSettings.GROUPSHARE_BASE+badge.name;
+				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), shareCommand);
+				
+				String clearSuffix = "pex user "+player.getName()+" suffix \"\"";
+				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
+	
+			} catch (SCException e) {
+				e.printStackTrace();
+			}
+		} else if (permissionCheck(SCSettings.PERMISSION_BASE+badge.name)) {
+			sendMessage(sender, SCColor.Red+"'"+badge.name+"' is not a Badge Group and cannot be left");
 		} else {
 			sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.name+"' Badge Group.");
 		}

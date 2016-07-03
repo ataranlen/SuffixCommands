@@ -23,6 +23,7 @@ public class SCSettings {
 	public static SuffixCommands plugin;
 	public static final String BADGE = "suffixcommands.badge.set";
 	public static final String GROUP_BASE = "suffixcommands.badgegroup.";
+	public static final String GROUPSHARE_BASE = "suffixcommands.sharegroup.";
 	public static final String PERMISSION_BASE = "suffixcommands.badge.";
 	public static final String PERMISSION_CHAT = "suffixcommands.chat.";
 	

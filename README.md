@@ -12,7 +12,9 @@ If you want to see it in action, join anarchy.minetexas.com
 ##Commands:
 * /badge set [name]- Change your badge to one you own
 * /badge give [name] [player]- Grant a player access to a group badge
+* /badge share [name] [player]- Grant a player access to give a group badge
 * /badge take [name] [player]- Remove a player's access to a group badge
+* /badge leave [name] - Remove your own access to a group badge
 * /badge remove - Remove your current badge
 * /badge owned - List all your owned badges
 * /badge group - List all your group badges

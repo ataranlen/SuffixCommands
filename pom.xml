@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.minetexas</groupId>
   <artifactId>SuffixCommands</artifactId>
-  <version>0.4</version>
+  <version>0.5</version>
   <build>
       <plugins>
           <plugin>
@@ -13,22 +13,51 @@
                   <target>1.7</target>
               </configuration>
           </plugin>
+          <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.3</version>
+        <configuration>
+          <!-- put your configurations here -->
+        </configuration>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       </plugins>
    </build>
-   <repositories>
-       <repository>
-         <id>bukkit-repo</id>
-         <url>http://repo.bukkit.org/content/groups/public/</url>
-       </repository>
-   </repositories>
+	<repositories>
+	    <repository>
+	        <id>spigot-repo</id>
+	        <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+	    </repository>
+	</repositories>
    <dependencies>
-       <dependency>
-           <groupId>org.bukkit</groupId>
-           <artifactId>bukkit</artifactId>
-           <version>1.9-R0.1-SNAPSHOT</version>
-           <type>jar</type>
+    <!--Spigot API-->
+    <dependency>
+           <groupId>org.spigotmc</groupId>
+           <artifactId>spigot-api</artifactId>
+           <version>1.11-R0.1-SNAPSHOT</version>
            <scope>provided</scope>
-       </dependency>
+    </dependency>
+    <!--Bukkit API-->
+    <dependency>
+            <groupId>org.bukkit</groupId>
+            <artifactId>bukkit</artifactId>
+            <version>1.11-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+    </dependency>
+    <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.6.4</version>
+            <scope>compile</scope>
+        </dependency>
        <dependency>
 		<groupId>commons-io</groupId>
 		<artifactId>commons-io</artifactId>
@@ -41,6 +70,18 @@
             <scope>system</scope>
             <systemPath>D:/civcraftsvn/trunk/lib/HeroChat.jar</systemPath>
         </dependency>
-       
+        <dependency>
+	        <groupId>com.zaxxer</groupId>
+    	    <artifactId>HikariCP</artifactId>
+	        <version>2.5.1</version>
+	        <scope>compile</scope>
+	    </dependency>
+		<dependency>
+		    <groupId>ru.tehkode</groupId>
+		    <artifactId>PermissionsEx</artifactId>
+		    <version>1.23.1</version>
+			<scope>system</scope>
+            <systemPath>D:/civcraftsvn/trunk/lib/PermissionsEx-1.23.1.jar</systemPath>
+		</dependency>
    </dependencies>
 </project>

@@ -1,0 +1,15 @@
+﻿#Default Badges
+mysql:
+   hostname: localhost
+   port: '3306'
+   database: game
+   username: user
+   password: 'PasswordForDatabaseUser'
+   table_prefix: ''
+   min_conns: '5'
+   max_conns: '10'
+   parts: '3'
+badges:
+    - name: 'gimmie'
+      badgeText: ' &b༼ つ ◕_◕ ༽つ'
+      color: '&b'

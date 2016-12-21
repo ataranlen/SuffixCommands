@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import com.dthielke.herochat.Chatter;
 import com.dthielke.herochat.ChatterManager;
 import com.dthielke.herochat.Herochat;
+import com.minetexas.suffixcommands.Badge;
 import com.minetexas.suffixcommands.exception.SCException;
 import com.minetexas.suffixcommands.util.ConfigBadges;
 import com.minetexas.suffixcommands.util.SCColor;
@@ -70,72 +71,128 @@ public class ChatCommand extends CommandBase {
 		if (args.length < 2) {
 			throw new SCException("You have to say something.");
 		}
-		
-		ConfigBadges badge = SCSettings.badges.get(args[0]);
-		if (badge == null)
-		{
-			throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
-		}
-		
-		if (permissionCheck(SCSettings.PERMISSION_CHAT+badge.name)) {			
-			StringBuilder builder = new StringBuilder();
-			String mainColor = ChatColor.translateAlternateColorCodes('&', badge.chatColor);
-			builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&', badge.badgeText)+mainColor+"]"+mainColor);
-			
-			args[0] = "";
-			
-			for(String s : args) {
-				if (s.length() >= 1) {
-					builder.append(" "+s);
-				}
+		Badge badge = SCSettings.badges.get(args[1]);
+		if (badge == null) {
+			ConfigBadges legacyBadge = SCSettings.legacyBadges.get(args[0]);
+			if (legacyBadge == null)
+			{
+				throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
 			}
 			
-			String message = builder.toString();
-			SCLog.info(message);
-
-			Collection <? extends Player> players = Bukkit.getOnlinePlayers();
-
-			Boolean useHerochat = false;
-			if (SCSettings.hasHerochat == true) {
-				Herochat hc = Herochat.getPlugin();
-				useHerochat = hc.isEnabled();
-			}
-			for(Player p : players) {
-				if (useHerochat) {
-					ChatterManager cm = Herochat.getChatterManager();
-					Player player = (Player) sender;
-					Chatter chatter = cm.getChatter(player);
-					Chatter chattee = cm.getChatter(p);
-					if (chattee.isIgnoring(chatter)) {
-						continue;
+			if (permissionCheck(SCSettings.PERMISSION_CHAT+legacyBadge.name)) {			
+				StringBuilder builder = new StringBuilder();
+				String mainColor = ChatColor.translateAlternateColorCodes('&', legacyBadge.chatColor);
+				builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&', legacyBadge.badgeText)+mainColor+"]"+mainColor);
+				
+				args[0] = "";
+				
+				for(String s : args) {
+					if (s.length() >= 1) {
+						builder.append(" "+s);
 					}
 				}
-				if (p.hasPermission(SCSettings.PERMISSION_CHAT+badge.name)) {
-					p.sendMessage(message);	
+				
+				String message = builder.toString();
+				SCLog.info(message);
+
+				Collection <? extends Player> players = Bukkit.getOnlinePlayers();
+
+				Boolean useHerochat = false;
+				if (SCSettings.hasHerochat == true) {
+					Herochat hc = Herochat.getPlugin();
+					useHerochat = hc.isEnabled();
 				}
+				for(Player p : players) {
+					if (useHerochat) {
+						ChatterManager cm = Herochat.getChatterManager();
+						Player player = (Player) sender;
+						Chatter chatter = cm.getChatter(player);
+						Chatter chattee = cm.getChatter(p);
+						if (chattee.isIgnoring(chatter)) {
+							continue;
+						}
+					}
+					if (p.hasPermission(SCSettings.PERMISSION_CHAT+legacyBadge.name)) {
+						p.sendMessage(message);	
+					}
+				}
+				
+				
+				
+				
+			} else {
+				sendMessage(sender, SCColor.Red+"You don't have access to the '"+legacyBadge.name+"' Badge Group.");
 			}
-			
-			
-			
-			
 		} else {
-			sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.name+"' Badge Group.");
+			Player player = getPlayer();
+			String playerUUID = player.getUniqueId().toString();
+			if (badge.canUseBadge(playerUUID)) {			
+				StringBuilder builder = new StringBuilder();
+				String mainColor = ChatColor.translateAlternateColorCodes('&', badge.getChatColor());
+				builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&',  badge.getBadgeText())+mainColor+"]"+mainColor);
+				
+				args[0] = "";
+				
+				for(String s : args) {
+					if (s.length() >= 1) {
+						builder.append(" "+s);
+					}
+				}
+				
+				String message = builder.toString();
+				SCLog.info(message);
+
+				Collection <? extends Player> players = Bukkit.getOnlinePlayers();
+
+				Boolean useHerochat = false;
+				if (SCSettings.hasHerochat == true) {
+					Herochat hc = Herochat.getPlugin();
+					useHerochat = hc.isEnabled();
+				}
+				for(Player p : players) {
+					if (useHerochat) {
+						ChatterManager cm = Herochat.getChatterManager();
+						Chatter chatter = cm.getChatter(player);
+						Chatter chattee = cm.getChatter(p);
+						if (chattee.isIgnoring(chatter)) {
+							continue;
+						}
+					}
+					if (badge.canUseBadge(p.getUniqueId().toString())) {
+						p.sendMessage(message);	
+					}
+				}
+				
+				
+				
+				
+			} else {
+				sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.getName()+"' Badge Group.");
+			}
 		}
 	}
 	
 	public void list_cmd() throws SCException {
 		Boolean hasBadges = false;
 		sendHeading(sender, "List Badge Chat Channels");
-		for (ConfigBadges badge : SCSettings.badges.values())
-		{
-			if (permissionCheck(SCSettings.PERMISSION_CHAT+badge.name))
-			{
+		Player sender = getPlayer();
+		String senderUUID = sender.getUniqueId().toString();
+		for (Badge badge : SCSettings.badges.values()) {
+			if (badge.canUseBadge(senderUUID)) {
+				String status = "";
+				if (badge.isLeader(senderUUID)) {
+					status = "Leader";
+				} else if (badge.isMember(senderUUID)) {
+					status = "Member";
+				} else {
+					status = "Owner";
+				}
+				sendMessage(sender, badge.getName()+SCColor.Green+" ["+status+"]:"+ChatColor.translateAlternateColorCodes('&', badge.getBadgeText()));
 				hasBadges = true;
-				sendMessage(sender, badge.name+":"+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
 			}
 		}
 		if (!hasBadges) {
-			sendMessage(sender, "You don't own any badges");
+			sendMessage(sender, "You don't own any Group badges");
 		}
 	}
 

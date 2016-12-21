@@ -8,12 +8,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import com.minetexas.suffixcommands.commands.BadgeCommand;
 import com.minetexas.suffixcommands.commands.ChatCommand;
+import com.minetexas.suffixcommands.database.SQLUpdate;
 import com.minetexas.suffixcommands.exception.InvalidConfiguration;
 import com.minetexas.suffixcommands.util.SCLog;
 import com.minetexas.suffixcommands.util.SCSettings;
 
 public class SuffixCommands extends JavaPlugin {
-	@Override
+
+	public static boolean isDisable = false;
 	public void onEnable() {
 		
 
@@ -36,7 +38,10 @@ public class SuffixCommands extends JavaPlugin {
  
 	@Override
 	public void onDisable() {
+		super.onDisable();
 		SCLog.info("onDisable has been invoked!");
+		isDisable = true;
+		SQLUpdate.save();
 	}
 	
 	public boolean hasPlugin(String name) {

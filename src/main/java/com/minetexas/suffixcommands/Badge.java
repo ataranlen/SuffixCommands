@@ -106,12 +106,9 @@ public class Badge extends SQLObject {
 				OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(UUID.fromString(uuid));
 				String playerName = player.getName();
 				if (playerName != null) {
-				SCLog.debug(playerName);
 				PermissionUser user = PermissionsEx.getUser(playerName);
 					if (user != null) {
 						String suffix = user.getSuffix();
-						SCLog.debug(suffix);
-						SCLog.debug(getBadgeText());
 						if (suffix.equals(" "+getBadgeText())) {
 							String clearSuffix = "pex user "+player+" suffix \""+badgeText+"\"";
 							Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);

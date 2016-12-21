@@ -36,6 +36,8 @@ public class ConnectionPool {
 		config.setJdbcUrl(dbcUrl); 
 		config.setUsername(user); 
 		config.setPassword(pass);
+		config.addDataSourceProperty("characterEncoding","utf8");
+		config.addDataSourceProperty("useUnicode","true");
 		// Enable only for debugging.
 		//config.setCloseConnectionWatch(true);
 		

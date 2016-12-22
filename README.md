@@ -19,7 +19,8 @@ If you want to see it in action, join anarchy.minetexas.com
 * /badge remove - Remove your current badge
 * /badge owned - List all your owned badges
 * /badge group - List all your group badges
-* /badge list - List all possible badges
+* /badge list - List all Legacy badges
+* /badge members [name] - List all members of a group badges
 * /badge create [name] [owner] [badgeText] [ColorCode] - "Create a new badge group. [Admin Only]
 * /badge rename [name] [newName] [badgeText] - Rename a badge group.
 * /badge reload - Reload from the badges.yml [OP/Console only]

@@ -1,4 +1,4 @@
-﻿#Default Badges
+﻿#MySQL Configuration:
 mysql:
    hostname: localhost
    port: '3306'
@@ -9,6 +9,7 @@ mysql:
    min_conns: '5'
    max_conns: '10'
    parts: '3'
+#Legacy (Non-Group, permission based) Badges
 badges:
     - name: 'gimmie'
       badgeText: ' &b༼ つ ◕_◕ ༽つ'

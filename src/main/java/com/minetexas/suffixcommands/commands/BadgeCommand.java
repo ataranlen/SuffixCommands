@@ -28,20 +28,20 @@ public class BadgeCommand extends CommandBase {
 	@Override
 	public void init() {
 		command = "/badge";
-		displayName = "Manage Your Badges";
+		displayName = "Manage Your Badges. Badge names are case sensitive.";
 		
-		commands.put("set", "Change your badge to one you own");
-		commands.put("give", "Grant a player access to a group badge");
-		commands.put("take", "Remove a player's access to a group badge");
-		commands.put("share", "Grant a player access to give a group badge");
+		commands.put("set", "Change your badge to one you own. Usage: /badge set [name]");
+		commands.put("give", "Grant a player access to a group badge. Usage: /badge give [name] [player]");
+		commands.put("take", "Remove a player's access to a group badge. Usage: /badge take [name] [player]");
+		commands.put("share", "Grant a player access to give a group badge. Usage: /badge share [name] [player]");
 		commands.put("leave", "Leave a group badge");
 		commands.put("remove", "Remove your current badge");
 		commands.put("owned", "List all your owned badges");
 		commands.put("group", "List all your group badges");
 		commands.put("list", "List all possible badges");
 		commands.put("members", "List all members of the named badge group");
-		commands.put("create", "Create a new badge group");
-		commands.put("rename", "Rename a badge group");
+		commands.put("create", "Create a new badge group. [Admin Only] Usage: /badge create [name] [owner] [badgeText] [Chat Color Code]");
+		commands.put("rename", "Rename a badge group. Usage: /badge rename [name] [newname] [badgeText]");
 		
 		commands.put("reload", "Reload Badges from the Config [Admin Only]");
 	}
@@ -396,7 +396,7 @@ public class BadgeCommand extends CommandBase {
 
 				sendMessage(sender, leaderString);
 			}
-			ArrayList<String> members = badge.getLeaderUUIDs();
+			ArrayList<String> members = badge.getMemberUUIDs();
 			if (!members.isEmpty()) {
 				String memberString = SCColor.White+"[Members]: "+SCColor.ITALIC;
 
@@ -484,11 +484,11 @@ public class BadgeCommand extends CommandBase {
 		newName = newName.replaceAll("&", "");
 		badgeText = badgeText.replaceAll("§", "&");
 		badgeText = badgeText.replaceAll("&k", "");
-		if (newName.length() >= 10) {
+		if (newName.length() >= 16 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
 
 			throw new SCException("Please limit your New name to 10 characters.");
 		}
-		if (badgeText.length() >= 12) {
+		if (badgeText.length() >= 20 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
 
 			throw new SCException("Please limit your displayText to 12 characters.");
 		}

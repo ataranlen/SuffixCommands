@@ -71,7 +71,7 @@ public class ChatCommand extends CommandBase {
 		if (args.length < 2) {
 			throw new SCException("You have to say something.");
 		}
-		Badge badge = SCSettings.badges.get(args[1]);
+		Badge badge = SCSettings.badges.get(args[0]);
 		if (badge == null) {
 			ConfigBadges legacyBadge = SCSettings.legacyBadges.get(args[0]);
 			if (legacyBadge == null)

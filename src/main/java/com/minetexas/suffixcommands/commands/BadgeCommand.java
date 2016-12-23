@@ -217,7 +217,7 @@ public class BadgeCommand extends CommandBase {
 			throw new SCException("You cannot remove yourself from the '"+badge.getName()+"' Badge Group.");
 		}
 		
-		if (badge.canShareBadge(senderUUID)) {
+		if (badge.canShareBadge(senderUUID) && badge.canShareBadge(playerUUID)) {
 			sendMessage(sender, SCColor.Green+"Removed "+player+"'s 'give' access to the '"+badge.getName()+"' Badge Group");
 
 			badge.removeLeaderUUID(playerUUID);

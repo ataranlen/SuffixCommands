@@ -38,6 +38,8 @@ public class ConnectionPool {
 		config.setPassword(pass);
 		config.addDataSourceProperty("characterEncoding","utf8");
 		config.addDataSourceProperty("useUnicode","true");
+		config.addDataSourceProperty("ssl.mode", "disable");
+
 		// Enable only for debugging.
 		//config.setCloseConnectionWatch(true);
 		

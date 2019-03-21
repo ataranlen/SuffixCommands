@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 
 import com.minetexas.suffixcommands.exception.SCException;
 import com.minetexas.suffixcommands.util.SCColor;
+import com.minetexas.suffixcommands.util.SCLog;
 
 public abstract class CommandBase implements CommandExecutor {
 
@@ -118,6 +119,7 @@ public abstract class CommandBase implements CommandExecutor {
 	
 	public static void sendMessage(Object sender, String line) {
 		if ((sender instanceof Player)) {
+			SCLog.debug(((Player) sender).getDisplayName()+" - "+line);
 			((Player) sender).sendMessage(line);
 		} else if (sender instanceof CommandSender) {
 			((CommandSender) sender).sendMessage(line);

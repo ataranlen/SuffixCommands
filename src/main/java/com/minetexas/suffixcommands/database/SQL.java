@@ -48,7 +48,7 @@ public class SQL {
 		SQL.max_conns = Integer.valueOf(SCSettings.getStringBase("mysql.max_conns"));
 		SQL.parts = Integer.valueOf(SCSettings.getStringBase("mysql.parts"));
 
-				SCLog.info("\t Using "+SQL.hostname+":"+SQL.port+" user:"+SQL.username+" DB:"+SQL.db_name);
+		SCLog.info("\t Using "+SQL.hostname+":"+SQL.port+" user:"+SQL.username+" DB:"+SQL.db_name);
 
 		SCLog.info("\t Building Connection Pool for Badge database.");
 		badgeDatabase = new ConnectionPool(SQL.dsn, SQL.username, SQL.password, SQL.min_conns, SQL.max_conns, SQL.parts);

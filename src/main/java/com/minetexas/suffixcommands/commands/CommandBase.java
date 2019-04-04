@@ -119,7 +119,7 @@ public abstract class CommandBase implements CommandExecutor {
 	
 	public static void sendMessage(Object sender, String line) {
 		if ((sender instanceof Player)) {
-			SCLog.debug(((Player) sender).getDisplayName()+" - "+line);
+//			SCLog.debug(((Player) sender).getDisplayName()+" - "+line);
 			((Player) sender).sendMessage(line);
 		} else if (sender instanceof CommandSender) {
 			((CommandSender) sender).sendMessage(line);

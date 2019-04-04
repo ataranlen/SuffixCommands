@@ -37,6 +37,7 @@ suffixcommands.createbadge - Allows creation and renaming of unowned badges, use
 ```
 
 ##Default Config:
+```
 #MySQL Configuration:
 mysql:
    hostname: localhost

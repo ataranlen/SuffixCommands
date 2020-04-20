@@ -1,16 +1,13 @@
 package com.minetexas.suffixcommands.commands;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-
-import com.dthielke.herochat.Chatter;
-import com.dthielke.herochat.ChatterManager;
-import com.dthielke.herochat.Herochat;
+import com.degoos.wetsponge.WetSponge;
+import com.degoos.wetsponge.command.WSCommandSource;
+import com.degoos.wetsponge.entity.living.player.WSPlayer;
+import com.degoos.wetsponge.text.WSText;
 import com.minetexas.suffixcommands.Badge;
 import com.minetexas.suffixcommands.exception.SCException;
 import com.minetexas.suffixcommands.util.ConfigBadges;
@@ -19,6 +16,17 @@ import com.minetexas.suffixcommands.util.SCLog;
 import com.minetexas.suffixcommands.util.SCSettings;
 
 public class ChatCommand extends CommandBase {
+
+	public ChatCommand() {
+		super("chat", "Chat with your Badge Groups");
+	}
+
+	@Override
+	public List<String> sendTab(WSCommandSource arg0, String arg1, String[] arg2) {
+		// TODO Auto-generated method stub
+		List<String> keys = new ArrayList<>(commands.keySet());
+		return keys;
+	}
 
 	@Override
 	public void init() {
@@ -29,7 +37,7 @@ public class ChatCommand extends CommandBase {
 	}
 	
 	@Override
-	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+	public void executeCommand (WSCommandSource sender, String cmd, String[] args) {
 		init();
 		
 		this.args = args;
@@ -39,21 +47,21 @@ public class ChatCommand extends CommandBase {
 		
 		if (args.length == 0) {
 			doDefaultAction();
-			return false;
+			return;
 		}
 		
 		if (args[0].equalsIgnoreCase("help")) {
 			showHelp();
-			return true;
+			return;
 		}
 		
 
 		try {
 			parse_chat();
-			return true;
+			return;
 		} catch (SCException e) {
 			sendError(sender, e.getMessage());
-			return false;
+			return;
 		}
 	}
 	
@@ -79,10 +87,11 @@ public class ChatCommand extends CommandBase {
 				throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
 			}
 			
-			if (permissionCheck(SCSettings.PERMISSION_CHAT+legacyBadge.name)) {			
+			if (permissionCheck(SCSettings.PERMISSION_CHAT+legacyBadge.name)) {
+				
+				String mainColor = legacyBadge.chatColor;
 				StringBuilder builder = new StringBuilder();
-				String mainColor = ChatColor.translateAlternateColorCodes('&', legacyBadge.chatColor);
-				builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&', legacyBadge.badgeText)+mainColor+"]"+mainColor);
+				builder.append(mainColor+"["+sender.getName()+legacyBadge.badgeText+mainColor+"]"+mainColor);
 				
 				args[0] = "";
 				
@@ -95,25 +104,11 @@ public class ChatCommand extends CommandBase {
 				String message = builder.toString();
 				SCLog.info(message);
 
-				Collection <? extends Player> players = Bukkit.getOnlinePlayers();
+				Collection <? extends WSPlayer> players =  WetSponge.getServer().getOnlinePlayers();
 
-				Boolean useHerochat = false;
-				if (SCSettings.hasHerochat == true) {
-					Herochat hc = Herochat.getPlugin();
-					useHerochat = hc.isEnabled();
-				}
-				for(Player p : players) {
-					if (useHerochat) {
-						ChatterManager cm = Herochat.getChatterManager();
-						Player player = (Player) sender;
-						Chatter chatter = cm.getChatter(player);
-						Chatter chattee = cm.getChatter(p);
-						if (chattee.isIgnoring(chatter)) {
-							continue;
-						}
-					}
+				for(WSPlayer p : players) {
 					if (p.hasPermission(SCSettings.PERMISSION_CHAT+legacyBadge.name)) {
-						p.sendMessage(message);	
+						p.sendMessage(WSText.of(message).toBuilder().translateColors().build());	
 					}
 				}
 				
@@ -124,15 +119,16 @@ public class ChatCommand extends CommandBase {
 				sendMessage(sender, SCColor.Red+"You don't have access to the '"+legacyBadge.name+"' Badge Group.");
 			}
 		} else {
-			Player player = getPlayer();
+			WSPlayer player = getPlayer();
 			String playerUUID = player.getUniqueId().toString();
 			if (badge.canUseBadge(playerUUID)) {			
+				String mainColor = badge.getChatColor();
 				StringBuilder builder = new StringBuilder();
-				String mainColor = ChatColor.translateAlternateColorCodes('&', badge.getChatColor());
-				builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&',  badge.getBadgeText())+mainColor+"]"+mainColor);
-				
+				SCLog.info(mainColor + "Test");
+				builder.append(mainColor+"["+sender.getName()+badge.getBadgeText()+mainColor+"]"+mainColor);
 				args[0] = "";
-				
+
+				SCLog.info(builder.toString());
 				for(String s : args) {
 					if (s.length() >= 1) {
 						builder.append(" "+s);
@@ -142,30 +138,13 @@ public class ChatCommand extends CommandBase {
 				String message = builder.toString();
 				SCLog.info(message);
 
-				Collection <? extends Player> players = Bukkit.getOnlinePlayers();
+				Collection <? extends WSPlayer> players = WetSponge.getServer().getOnlinePlayers();
 
-				Boolean useHerochat = false;
-				if (SCSettings.hasHerochat == true) {
-					Herochat hc = Herochat.getPlugin();
-					useHerochat = hc.isEnabled();
-				}
-				for(Player p : players) {
-					if (useHerochat) {
-						ChatterManager cm = Herochat.getChatterManager();
-						Chatter chatter = cm.getChatter(player);
-						Chatter chattee = cm.getChatter(p);
-						if (chattee.isIgnoring(chatter)) {
-							continue;
-						}
-					}
+				for(WSPlayer p : players) {
 					if (badge.canUseBadge(p.getUniqueId().toString())) {
-						p.sendMessage(message);	
+						p.sendMessage(WSText.of(message).toBuilder().translateColors().build());	
 					}
 				}
-				
-				
-				
-				
 			} else {
 				sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.getName()+"' Badge Group.");
 			}
@@ -175,7 +154,7 @@ public class ChatCommand extends CommandBase {
 	public void list_cmd() throws SCException {
 		Boolean hasBadges = false;
 		sendHeading(sender, "List Badge Chat Channels");
-		Player sender = getPlayer();
+		WSPlayer sender = getPlayer();
 		String senderUUID = sender.getUniqueId().toString();
 		for (Badge badge : SCSettings.badges.values()) {
 			if (badge.canUseBadge(senderUUID)) {
@@ -187,7 +166,7 @@ public class ChatCommand extends CommandBase {
 				} else {
 					status = "Owner";
 				}
-				sendMessage(sender, badge.getName()+SCColor.Green+" ["+status+"]:"+ChatColor.translateAlternateColorCodes('&', badge.getBadgeText()));
+				sender.sendMessage(WSText.of(badge.getName()+SCColor.Green+" ["+status+"]:"+badge.getChatColor()).toBuilder().translateColors().build());
 				hasBadges = true;
 			}
 		}
@@ -212,7 +191,7 @@ public class ChatCommand extends CommandBase {
 
 	@Override
 	public void showHelp() {
-		Player player;
+		WSPlayer player;
 		try {
 			player = getPlayer();
 		} catch (SCException e) {
@@ -220,7 +199,7 @@ public class ChatCommand extends CommandBase {
 			return;
 		}
 		
-		if (!player.isOp() && !player.hasPermission(SCSettings.BADGE)) {
+		if (player == null || !player.hasPermission(SCSettings.BADGE)) {
 			return;
 		}
 		
@@ -243,7 +222,7 @@ public class ChatCommand extends CommandBase {
 	}
 	
 	public Boolean permissionCheck(String permission) {
-		Player player;
+		WSPlayer player;
 		try {
 			player = getPlayer();
 		} catch (SCException e) {
@@ -251,7 +230,7 @@ public class ChatCommand extends CommandBase {
 			return false;
 		}
 		
-		if (!player.isOp() && !player.hasPermission(permission)) {
+		if (!player.hasPermission(permission)) {
 			return false;
 		}
 		return true;

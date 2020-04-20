@@ -3,16 +3,17 @@ package com.minetexas.suffixcommands.util;
 import java.util.List;
 import java.util.Map;
 
-import org.bukkit.configuration.file.FileConfiguration;
+import com.degoos.wetsponge.config.ConfigAccessor;
 
 public class ConfigBadges {
 	public String name;	
 	public String badgeText;
 	public String chatColor;
 	
-	public static void loadConfig(FileConfiguration cfg, Map<String, ConfigBadges> badges) {
+	public static void loadConfig(ConfigAccessor cfg, Map<String, ConfigBadges> badges) {
 		badges.clear();
-		List<Map<?, ?>> badgeID = cfg.getMapList("badges");
+		@SuppressWarnings("unchecked")
+		List<Map<?, ?>> badgeID = (List<Map<?, ?>>) cfg.getList("badges");
 		for (Map<?, ?> badge : badgeID) {
 			ConfigBadges newBadge = new ConfigBadges();
 			newBadge.name = (String)badge.get("name");

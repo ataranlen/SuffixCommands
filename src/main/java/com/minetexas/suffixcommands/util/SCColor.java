@@ -1,6 +1,7 @@
 package com.minetexas.suffixcommands.util;
 
-import org.bukkit.ChatColor;
+import com.degoos.wetsponge.enums.EnumTextStyle;
+import com.degoos.wetsponge.enums.EnumTextColor;
 
 public class SCColor {
 
@@ -20,12 +21,12 @@ public class SCColor {
 	public static final String LightPurple = "\u00A7d";
 	public static final String Yellow = "\u00A7e";
 	public static final String White = "\u00A7f";
-	public static final String BOLD = ""+ChatColor.BOLD;
-	public static final String ITALIC = ""+ChatColor.ITALIC;
-	public static final String MAGIC = ""+ChatColor.MAGIC;
-	public static final String STRIKETHROUGH = ""+ChatColor.STRIKETHROUGH;
-	public static final String RESET = ""+ChatColor.RESET;
-	public static final String UNDERLINE = ""+ChatColor.UNDERLINE;
+	public static final String BOLD = ""+EnumTextStyle.BOLD;
+	public static final String ITALIC = ""+EnumTextStyle.ITALIC;
+	public static final String MAGIC = ""+EnumTextStyle.OBFUSCATED;
+	public static final String STRIKETHROUGH = ""+EnumTextStyle.STRIKETHROUGH;
+	public static final String RESET = ""+EnumTextStyle.RESET;
+	public static final String UNDERLINE = ""+EnumTextStyle.UNDERLINE;
 
 	
 	/*
@@ -52,19 +53,19 @@ public class SCColor {
 		output = output.replaceAll("<lightgray>", LightGray);
 		output = output.replaceAll("<gray>", Gray);
 		output = output.replaceAll("<black>", Black);
-		output = output.replaceAll("<b>", ""+ChatColor.BOLD);
-		output = output.replaceAll("<u>", ""+ChatColor.UNDERLINE);
-		output = output.replaceAll("<i>", ""+ChatColor.ITALIC);
-		output = output.replaceAll("<magic>", ""+ChatColor.MAGIC);
-		output = output.replaceAll("<s>", ""+ChatColor.STRIKETHROUGH);
-		output = output.replaceAll("<r>", ""+ChatColor.RESET);
+		output = output.replaceAll("<b>", ""+EnumTextStyle.BOLD);
+		output = output.replaceAll("<u>", ""+EnumTextStyle.UNDERLINE);
+		output = output.replaceAll("<i>", ""+EnumTextStyle.ITALIC);
+		output = output.replaceAll("<magic>", ""+EnumTextStyle.OBFUSCATED);
+		output = output.replaceAll("<s>", ""+EnumTextStyle.STRIKETHROUGH);
+		output = output.replaceAll("<r>", ""+EnumTextStyle.RESET);
 		
 		return output;
 	}
 	
 	public static String strip(String line) {
 
-		for (ChatColor cc : ChatColor.values())
+		for (EnumTextColor cc : EnumTextColor.values())
 			line.replaceAll(cc.toString(), "");
 		return line;
 	}

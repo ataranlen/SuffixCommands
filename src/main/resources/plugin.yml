@@ -1,19 +1,5 @@
 name: SuffixCommands
 main: com.minetexas.suffixcommands.SuffixCommands
-version: 0.7
+version: 0.8
 author: ataranlen
 description: Simple Badge Groups for User selectable pexPermission Suffixes
-
-commands:
-  badge:
-    description: Change your badge to one that you own.
-    permission: suffixcommands.badge.set
-    permission-message: You are not allowed to change your own badge
-  chat:
-    description: Send a message to your badge group.
-    permission: suffixcommands.badge.chat
-    permission-message: You are not allowed to use this chat.
-  bc:
-    description: Send a message to your badge group.
-    permission: suffixcommands.badge.chat
-    permission-message: You are not allowed to use this chat.

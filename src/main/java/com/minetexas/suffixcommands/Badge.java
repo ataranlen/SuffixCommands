@@ -5,12 +5,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
-
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
-
-import ru.tehkode.permissions.PermissionUser;
-import ru.tehkode.permissions.bukkit.PermissionsEx;
+import java.util.concurrent.CompletableFuture;
 
 import com.minetexas.suffixcommands.database.SQL;
 import com.minetexas.suffixcommands.database.SQLObject;
@@ -21,6 +16,9 @@ import com.minetexas.suffixcommands.exception.SCException;
 import com.minetexas.suffixcommands.util.ConfigBadges;
 import com.minetexas.suffixcommands.util.SCLog;
 import com.minetexas.suffixcommands.util.SCSettings;
+
+import net.luckperms.api.model.user.User;
+import net.luckperms.api.model.user.UserManager;
 
 public class Badge extends SQLObject {
 	private String badgeText = "";
@@ -101,20 +99,18 @@ public class Badge extends SQLObject {
 		
 		if (!oldBadgeText.equals(badgeText)) {
 			//Loop through all players who own the badge and are using the badge.
-			
+		    UserManager userManager = SCSettings.luckPermsAPI.getUserManager();
 			for (String uuid : getAllPlayersWithAccess()) {
-				OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(UUID.fromString(uuid));
-				String playerName = player.getName();
-				if (playerName != null) {
-				PermissionUser user = PermissionsEx.getUser(playerName);
-					if (user != null) {
-						String suffix = user.getSuffix();
-						if (suffix.equals(" "+getBadgeText())) {
-							String clearSuffix = "pex user "+player+" suffix \""+badgeText+"\"";
-							Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
-						}
+				UUID guid = UUID.fromString(uuid);
+				CompletableFuture<User> userFuture = userManager.loadUser(guid);
+				userFuture.thenAcceptAsync(user -> {
+					String suffix = SCSettings.getSuffix(user);
+					if (suffix.equals(" "+getBadgeText())) {
+						SCSettings.setSuffix(user, badgeText);
 					}
-				}
+			    });
+					
+				
 			}
 			
 		}

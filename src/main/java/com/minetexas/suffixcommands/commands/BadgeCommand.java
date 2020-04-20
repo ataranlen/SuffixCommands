@@ -1,19 +1,17 @@
 package com.minetexas.suffixcommands.commands;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.entity.Player;
-
-import ru.tehkode.permissions.PermissionUser;
-import ru.tehkode.permissions.bukkit.PermissionsEx;
-
+import com.degoos.wetsponge.WetSponge;
+import com.degoos.wetsponge.command.WSCommandSource;
+import com.degoos.wetsponge.entity.living.player.WSPlayer;
+import com.degoos.wetsponge.exception.player.WSPlayerNotFoundException;
+import com.degoos.wetsponge.text.WSText;
 import com.minetexas.suffixcommands.Badge;
 import com.minetexas.suffixcommands.exception.InvalidConfiguration;
 import com.minetexas.suffixcommands.exception.InvalidNameException;
@@ -23,7 +21,20 @@ import com.minetexas.suffixcommands.util.SCColor;
 import com.minetexas.suffixcommands.util.SCLog;
 import com.minetexas.suffixcommands.util.SCSettings;
 
+import net.luckperms.api.model.user.User;
+
 public class BadgeCommand extends CommandBase {
+
+	public BadgeCommand() {
+		super("badge", "Manage Your Badges. Badge names are case sensitive.");
+	}
+
+	@Override
+	public List<String> sendTab(WSCommandSource arg0, String arg1, String[] arg2) {
+		// TODO Auto-generated method stub
+		List<String> keys = new ArrayList<>(commands.keySet());
+		return keys;
+	}
 
 	@Override
 	public void init() {
@@ -65,12 +76,12 @@ public class BadgeCommand extends CommandBase {
 			if (permissionCheck(SCSettings.PERMISSION_BASE+legacyBadge.name)
 					|| permissionCheck(SCSettings.GROUPSHARE_BASE+legacyBadge.name)
 					|| permissionCheck(SCSettings.GROUP_BASE+legacyBadge.name)) {
-				Player player;
+				WSPlayer player;
 				try {
 					player = getPlayer();
-					sendMessage(sender, SCColor.Green+"Badge Set to:"+ChatColor.translateAlternateColorCodes('&', legacyBadge.badgeText));
-					String command = "pex user "+player.getName()+" suffix \""+legacyBadge.badgeText+"\"";
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+					player.sendMessage(WSText.of(SCColor.Green+"Badge Set to:"+legacyBadge.badgeText).toBuilder().translateColors().build());
+					User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+					SCSettings.setSuffix(user, " "+ legacyBadge.badgeText);
 				} catch (SCException e) {
 					e.printStackTrace();
 				}
@@ -79,12 +90,12 @@ public class BadgeCommand extends CommandBase {
 				throw new SCException("You don't own the "+legacyBadge.name+" Badge.");
 			}
 		} else {
-			Player player = getPlayer();
+			WSPlayer player = getPlayer();
 			String playerUUID = player.getUniqueId().toString();
 			if (badge.canUseBadge(playerUUID)) {
-				sendMessage(sender, SCColor.Green+"Badge Set to:"+ChatColor.translateAlternateColorCodes('&', badge.getBadgeText()));
-				String command = "pex user "+player.getName()+" suffix \""+badge.getBadgeText()+"\"";
-				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+				player.sendMessage(WSText.of(SCColor.Green+"Badge Set to:"+badge.getBadgeText()).toBuilder().translateColors().build());
+				User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+				SCSettings.setSuffix(user, " "+ badge.getBadgeText());
 			}else {
 				sendMessage(sender, SCColor.Red+"You don't have 'use' access to the "+badge.getName()+" Badge.");
 			}
@@ -108,36 +119,42 @@ public class BadgeCommand extends CommandBase {
 		}
 		String playerName = args[2];
 		
-		@SuppressWarnings("deprecation")
-		OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
-		String playerUUID = player.getUniqueId().toString();
-		
-		if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
-			if (badge.canUseBadge(playerUUID)) {
-				throw new SCException(playerName+" already has 'use' access to the '"+badge.getName()+"' Badge Group.");
+		try {
+			WSPlayer player = WetSponge.getServer().getPlayer(playerName).orElseThrow(WSPlayerNotFoundException::new);
+			String playerUUID = player.getUniqueId().toString();
+			if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
+				if (badge.canUseBadge(playerUUID)) {
+					throw new SCException(playerName+" already has 'use' access to the '"+badge.getName()+"' Badge Group.");
+				}
+
+				badge.addMemberUUID(playerUUID);
+				sendMessage(sender, SCColor.LightGreen+playerName+" was given 'use' access to the '"+badge.getName()+"' Badge Group.");
+				return;
+			}
+			
+			WSPlayer sender = getPlayer();
+			String senderUUID = sender.getUniqueId().toString();
+			if (senderUUID.equals(playerUUID)) {
+				throw new SCException("You cannot add yourself to the '"+badge.getName()+"' Badge Group.");
 			}
 
-			badge.addMemberUUID(playerUUID);
-			sendMessage(sender, SCColor.LightGreen+playerName+" was given 'use' access to the '"+badge.getName()+"' Badge Group.");
-			return;
+			if (badge.canGiveBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
+				if (badge.canUseBadge(playerUUID)) {
+					throw new SCException(playerName+" already has 'use' access to the '"+badge.getName()+"' Badge Group.");
+				}
+
+				badge.addMemberUUID(playerUUID);
+				sendMessage(sender, SCColor.LightGreen+playerName+" was given 'use' access to the '"+badge.getName()+"' Badge Group.");
+			} else {
+				sendMessage(sender, SCColor.Red+"You don't have 'give' access to the '"+badge.getName()+"' Badge Group.");
+			}
+		} catch (WSPlayerNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		
-		Player sender = getPlayer();
-		String senderUUID = sender.getUniqueId().toString();
-		if (senderUUID.equals(playerUUID)) {
-			throw new SCException("You cannot add yourself to the '"+badge.getName()+"' Badge Group.");
-		}
+		
 
-		if (badge.canGiveBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
-			if (badge.canUseBadge(playerUUID)) {
-				throw new SCException(playerName+" already has 'use' access to the '"+badge.getName()+"' Badge Group.");
-			}
-
-			badge.addMemberUUID(playerUUID);
-			sendMessage(sender, SCColor.LightGreen+playerName+" was given 'use' access to the '"+badge.getName()+"' Badge Group.");
-		} else {
-			sendMessage(sender, SCColor.Red+"You don't have 'give' access to the '"+badge.getName()+"' Badge Group.");
-		}
 	}
 	
 	public void share_cmd() throws SCException {		
@@ -157,36 +174,41 @@ public class BadgeCommand extends CommandBase {
 		}
 		String playerName = args[2];
 		
-		@SuppressWarnings("deprecation")
-		OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
-		String playerUUID = player.getUniqueId().toString();
-		
-		if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
-			if (badge.canGiveBadge(playerUUID)) {
-				throw new SCException(playerName+" already has 'give' access to the '"+badge.getName()+"' Badge Group.");
+		try {
+			WSPlayer player = WetSponge.getServer().getPlayer(playerName).orElseThrow(WSPlayerNotFoundException::new);
+			String playerUUID = player.getUniqueId().toString();
+			
+			if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
+				if (badge.canGiveBadge(playerUUID)) {
+					throw new SCException(playerName+" already has 'give' access to the '"+badge.getName()+"' Badge Group.");
+				}
+
+				badge.addLeaderUUID(playerUUID);
+				sendMessage(sender, SCColor.LightGreen+playerName+" was given 'give' access to the '"+badge.getName()+"' Badge Group.");
+				return;
+			}
+			
+			WSPlayer sender = getPlayer();
+			String senderUUID = sender.getUniqueId().toString();
+			if (senderUUID.equals(playerUUID)) {
+				throw new SCException("You cannot add yourself to the '"+badge.getName()+"' Badge Group.");
 			}
 
-			badge.addLeaderUUID(playerUUID);
-			sendMessage(sender, SCColor.LightGreen+playerName+" was given 'give' access to the '"+badge.getName()+"' Badge Group.");
-			return;
+			if (badge.canGiveBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
+				if (badge.canGiveBadge(playerUUID)) {
+					throw new SCException(playerName+" already has 'give' access to the '"+badge.getName()+"' Badge Group.");
+				}
+
+				badge.addLeaderUUID(playerUUID);
+				sendMessage(sender, SCColor.LightGreen+playerName+" was given 'give' access to the '"+badge.getName()+"' Badge Group.");
+			} else {
+				sendMessage(sender, SCColor.Red+"You don't have 'share' access to the '"+badge.getName()+"' Badge Group.");
+			}
+		} catch (WSPlayerNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		
-		Player sender = getPlayer();
-		String senderUUID = sender.getUniqueId().toString();
-		if (senderUUID.equals(playerUUID)) {
-			throw new SCException("You cannot add yourself to the '"+badge.getName()+"' Badge Group.");
-		}
-
-		if (badge.canGiveBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
-			if (badge.canGiveBadge(playerUUID)) {
-				throw new SCException(playerName+" already has 'give' access to the '"+badge.getName()+"' Badge Group.");
-			}
-
-			badge.addLeaderUUID(playerUUID);
-			sendMessage(sender, SCColor.LightGreen+playerName+" was given 'give' access to the '"+badge.getName()+"' Badge Group.");
-		} else {
-			sendMessage(sender, SCColor.Red+"You don't have 'share' access to the '"+badge.getName()+"' Badge Group.");
-		}
 		
 	}
 	
@@ -207,41 +229,40 @@ public class BadgeCommand extends CommandBase {
 		}
 		String playerName = args[2];
 		
-		@SuppressWarnings("deprecation")
-		OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
-		String playerUUID = player.getUniqueId().toString();
-		
-		Player sender = getPlayer();
-		String senderUUID = sender.getUniqueId().toString();
-		if (senderUUID.equals(playerUUID)) {
-			throw new SCException("You cannot remove yourself from the '"+badge.getName()+"' Badge Group.");
-		}
-		
-		if (badge.canShareBadge(senderUUID) && badge.canShareBadge(playerUUID)) {
-			sendMessage(sender, SCColor.Green+"Removed "+player+"'s 'give' access to the '"+badge.getName()+"' Badge Group");
+		try {
+			WSPlayer player = WetSponge.getServer().getPlayer(playerName).orElseThrow(WSPlayerNotFoundException::new);
+			WSPlayer sender = getPlayer();
+			String senderUUID = sender.getUniqueId().toString();
+			String playerUUID = player.getUniqueId().toString();
 
-			badge.removeLeaderUUID(playerUUID);
-		    PermissionUser user = PermissionsEx.getUser(playerName);
+			if (senderUUID.equals(playerUUID)) {
+				throw new SCException("You cannot remove yourself from the '"+badge.getName()+"' Badge Group.");
+			}
+			if (badge.canShareBadge(senderUUID) && badge.canShareBadge(playerUUID)) {
+				sendMessage(sender, SCColor.Green+"Removed "+player+"'s 'give' access to the '"+badge.getName()+"' Badge Group");
 
-			if (user != null) {
-				String suffix = user.getSuffix();
+				badge.removeLeaderUUID(playerUUID);
+				User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+				String suffix = SCSettings.getSuffix(user);
 				if (suffix.equals(" "+badge.getBadgeText())) {
-					String clearSuffix = "pex user "+player+" suffix \"\"";
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
+					SCSettings.setSuffix(user, "");
 				}
-			}
-		
-		} else if (badge.canGiveBadge(senderUUID)) {
-			if (badge.canShareBadge(playerUUID)) {
-				throw new SCException("You cannot remove the owner from the '"+badge.getName()+"' Badge Group.");
-			} else if (badge.canGiveBadge(playerUUID)) {
-				throw new SCException("You cannot remove another Leader from the '"+badge.getName()+"' Badge Group.");
-			}
-			sendMessage(sender, SCColor.Green+"Removed "+player+"'s 'use' access to the '"+badge.getName()+"' Badge Group");
+			
+			} else if (badge.canGiveBadge(senderUUID)) {
+				if (badge.canShareBadge(playerUUID)) {
+					throw new SCException("You cannot remove the owner from the '"+badge.getName()+"' Badge Group.");
+				} else if (badge.canGiveBadge(playerUUID)) {
+					throw new SCException("You cannot remove another Leader from the '"+badge.getName()+"' Badge Group.");
+				}
+				sendMessage(sender, SCColor.Green+"Removed "+player+"'s 'use' access to the '"+badge.getName()+"' Badge Group");
 
-			badge.removeMemberUUID(playerUUID);
-		} else {
-			sendMessage(sender, SCColor.Red+"You don't have 'share' access to the '"+badge.getName()+"' Badge Group.");
+				badge.removeMemberUUID(playerUUID);
+			} else {
+				sendMessage(sender, SCColor.Red+"You don't have 'share' access to the '"+badge.getName()+"' Badge Group.");
+			}
+		} catch (WSPlayerNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	
@@ -258,7 +279,7 @@ public class BadgeCommand extends CommandBase {
 			throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
 		}
 		
-		Player sender = getPlayer();
+		WSPlayer sender = getPlayer();
 		String senderUUID = sender.getUniqueId().toString();
 		
 		if (badge.canShareBadge(senderUUID)) {
@@ -268,15 +289,11 @@ public class BadgeCommand extends CommandBase {
 				badge.removeLeaderUUID(senderUUID);
 			}
 			badge.removeMemberUUID(senderUUID);
-			
-			PermissionUser user = PermissionsEx.getUser(sender);
 
-			if (user != null) {
-				String suffix = user.getSuffix();
-				if (suffix.equals(" "+badge.getBadgeText())) {
-					String clearSuffix = "pex user "+sender.getName()+" suffix \"\"";
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
-				}
+			User user = SCSettings.luckPermsAPI.getUserManager().getUser(senderUUID);
+			String suffix = SCSettings.getSuffix(user);
+			if (suffix.equals(" "+badge.getBadgeText())) {
+				SCSettings.setSuffix(user, "");
 			}
 
 			sendMessage(sender, SCColor.Red+"You have given up access to the '"+badge.getName()+"' Badge Group.");
@@ -292,9 +309,9 @@ public class BadgeCommand extends CommandBase {
 		{
 			if (permissionCheck(SCSettings.PERMISSION_BASE+badge.name) || permissionCheck(SCSettings.GROUP_BASE+badge.name))
 			{
-				sendMessage(sender, badge.name+SCColor.Green+" [Owned]:"+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
+				sendMessage(sender, WSText.of(badge.name+SCColor.Green+" [Owned]:"+badge.badgeText).toBuilder().translateColors().build());
 			} else {
-				sendMessage(sender, badge.name+SCColor.LightGray+" [Unowned]:"+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
+				sendMessage(sender, WSText.of(badge.name+SCColor.LightGray+" [Unowned]:"+badge.badgeText).toBuilder().translateColors().build());
 			}
 		}
 	}
@@ -302,7 +319,7 @@ public class BadgeCommand extends CommandBase {
 	public void group_cmd() throws SCException {
 		Boolean hasBadges = false;
 		sendHeading(sender, "List of owned Group Badges");
-		Player sender = getPlayer();
+		WSPlayer sender = getPlayer();
 		String senderUUID = sender.getUniqueId().toString();
 		for (Badge badge : SCSettings.badges.values()) {
 			if (badge.canUseBadge(senderUUID)) {
@@ -314,7 +331,7 @@ public class BadgeCommand extends CommandBase {
 				} else {
 					status = "Owner";
 				}
-				sendMessage(sender, badge.getName()+SCColor.Green+" ["+status+"]:"+ChatColor.translateAlternateColorCodes('&', badge.getBadgeText()));
+				sendMessage(sender, WSText.of(badge.getName()+SCColor.Green+" ["+status+"]:"+badge.getBadgeText()).toBuilder().translateColors().build());
 				hasBadges = true;
 			}
 		}
@@ -326,7 +343,7 @@ public class BadgeCommand extends CommandBase {
 	public void owned_cmd() throws SCException {
 		Boolean hasBadges = false;
 		sendHeading(sender, "List of owned Badges");
-		Player sender = getPlayer();
+		WSPlayer sender = getPlayer();
 		String senderUUID = sender.getUniqueId().toString();
 		
 		for (Badge badge : SCSettings.badges.values()) {
@@ -339,7 +356,7 @@ public class BadgeCommand extends CommandBase {
 				} else {
 					status = "Owner";
 				}
-				sendMessage(sender, badge.getName()+SCColor.Green+" ["+status+"]:"+ChatColor.translateAlternateColorCodes('&', badge.getBadgeText()));
+				sendMessage(sender, WSText.of(badge.getName()+SCColor.Green+" ["+status+"]:"+badge.getBadgeText()).toBuilder().translateColors().build());
 			} 
 		}
 		for (ConfigBadges badge : SCSettings.legacyBadges.values())
@@ -347,7 +364,7 @@ public class BadgeCommand extends CommandBase {
 			if (permissionCheck(SCSettings.PERMISSION_BASE+badge.name) || permissionCheck(SCSettings.GROUP_BASE+badge.name))
 			{
 				hasBadges = true;
-				sendMessage(sender, badge.name+":"+ChatColor.translateAlternateColorCodes('&', badge.badgeText));
+				sendMessage(sender, WSText.of(badge.name+":"+badge.badgeText).toBuilder().translateColors().build());
 			}
 		}
 		
@@ -358,11 +375,11 @@ public class BadgeCommand extends CommandBase {
 	
 	public void remove_cmd() throws SCException {		
 
-		Player player;
+		WSPlayer player;
 		try {
 			player = getPlayer();
 			sendMessage(sender, SCColor.LightGreen+"Badge removed");
-			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "pex user "+player.getName()+" suffix \"\"");
+			SCSettings.setSuffix(player, "");
 		} catch (SCException e) {
 			e.printStackTrace();
 		}
@@ -381,17 +398,30 @@ public class BadgeCommand extends CommandBase {
 			throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization");
 		}
 
-		Player player = getPlayer();
+		WSPlayer player = getPlayer();
 		String playerUUID = player.getUniqueId().toString();
 		if (badge.canUseBadge(playerUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			//List all players who have access to the badge group.
-			sendMessage(sender, SCColor.Green+"[Owner]: "+SCColor.ITALIC+Bukkit.getServer().getOfflinePlayer(UUID.fromString(badge.getOwnerUUID())).getName());
+			try {
+				WSPlayer ownerPlayer = WetSponge.getServer().getPlayer(UUID.fromString(badge.getOwnerUUID())).orElseThrow(WSPlayerNotFoundException::new);
+				sendMessage(sender, SCColor.Green+"[Owner]: "+SCColor.ITALIC+ownerPlayer.getName());
+			} catch (WSPlayerNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
 			
 			ArrayList<String> leaders = badge.getLeaderUUIDs();
 			if (!leaders.isEmpty()) {
 				String leaderString = SCColor.LightGreen+"[Leaders]: "+SCColor.ITALIC;
 				for (String uuidString : leaders) {
-					leaderString += Bukkit.getServer().getOfflinePlayer(UUID.fromString(uuidString)).getName()+", ";  
+					try {
+						WSPlayer leaderPlayer = WetSponge.getServer().getPlayer(UUID.fromString(uuidString)).orElseThrow(WSPlayerNotFoundException::new);
+						leaderString += leaderPlayer.getName()+", "; 
+					} catch (WSPlayerNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} 
 				}
 
 				sendMessage(sender, leaderString);
@@ -401,7 +431,13 @@ public class BadgeCommand extends CommandBase {
 				String memberString = SCColor.White+"[Members]: "+SCColor.ITALIC;
 
 				for (String uuidString : badge.getMemberUUIDs()) {
-					memberString += Bukkit.getServer().getOfflinePlayer(UUID.fromString(uuidString)).getName()+", ";  
+					try {
+						WSPlayer memberPlayer = WetSponge.getServer().getPlayer(UUID.fromString(uuidString)).orElseThrow(WSPlayerNotFoundException::new);
+						memberString += memberPlayer.getName()+", ";
+					} catch (WSPlayerNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}  
 					
 				}
 				sendMessage(sender, memberString);
@@ -432,13 +468,9 @@ public class BadgeCommand extends CommandBase {
 		if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			Badge badge = SCSettings.badges.get(args[1]);
 			if (badge == null) {
-
-				@SuppressWarnings("deprecation")
-				OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
-				String playerUUID = player.getUniqueId().toString();
-				
-				
 				try {
+					WSPlayer player = WetSponge.getServer().getPlayer(playerName).orElseThrow(WSPlayerNotFoundException::new);
+					String playerUUID = player.getUniqueId().toString();
 					Badge newBadge = new Badge(name, " "+badgeText, colorCode, playerUUID);
 					SCLog.debug("PlayerName:"+ playerName +"; UUID: "+playerUUID);
 					try {
@@ -449,7 +481,7 @@ public class BadgeCommand extends CommandBase {
 					}
 
 					sendMessage(sender, SCColor.Red+"Badge Created");
-				} catch (InvalidNameException e) {
+				} catch (InvalidNameException | WSPlayerNotFoundException e) {
 					e.printStackTrace();
 
 					throw new SCException("Badge create failed");
@@ -493,7 +525,7 @@ public class BadgeCommand extends CommandBase {
 			throw new SCException("Please limit your displayText to 12 characters.");
 		}
 		
-		Player player = getPlayer();
+		WSPlayer player = getPlayer();
 		String playerUUID = player.getUniqueId().toString();
 		
 		Badge badge = SCSettings.badges.get(args[1]);
@@ -507,7 +539,7 @@ public class BadgeCommand extends CommandBase {
 			if (newBadge == null || name.equals(newName)) {
 				try {
 					badge.rename(newName, " "+badgeText);
-					sendMessage(sender, SCColor.Green+"'"+name+"' has been renamed to '"+newName+"' with the badgeText of '"+ChatColor.translateAlternateColorCodes('&', badgeText)+SCColor.Green+"'");
+					sendMessage(sender, WSText.of(SCColor.Green+"'"+name+"' has been renamed to '"+newName+"' with the badgeText of '"+badgeText+SCColor.Green+"'").toBuilder().translateColors().build());
 				} catch (InvalidNameException e) {
 					SCLog.exception("Badge Save failed", e);
 					throw new SCException("Badge save failed, Contact an admin.");
@@ -521,13 +553,17 @@ public class BadgeCommand extends CommandBase {
 	public void reload_cmd() throws SCException {
 		try {
 			SCSettings.reloadBadgeConfigFile();
-			sendMessage(sender, "Badges reloaded");
-		} catch (IOException | InvalidConfigurationException
-				| InvalidConfiguration e) {
+		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidConfiguration e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		sendMessage(sender, "Badges reloaded");
 	}
 
 	@Override
@@ -538,7 +574,7 @@ public class BadgeCommand extends CommandBase {
 
 	@Override
 	public void showHelp() {
-		Player player;
+		WSPlayer player;
 		try {
 			player = getPlayer();
 		} catch (SCException e) {
@@ -546,7 +582,7 @@ public class BadgeCommand extends CommandBase {
 			return;
 		}
 		
-		if (!player.isOp() && !player.hasPermission(SCSettings.BADGE)) {
+		if (!player.hasPermission(SCSettings.BADGE)) {
 			return;
 		}
 		
@@ -569,27 +605,23 @@ public class BadgeCommand extends CommandBase {
 	}
 	
 	public Boolean permissionCheck(String permission) {
-		if (sender instanceof Player) {
-			Player player;
+		if (sender instanceof WSPlayer) {
+			WSPlayer player;
 			try {
 				player = getPlayer();
-				if (player.isOp() || player.hasPermission(permission)) {
+				if (player.hasPermission(permission)) {
 					return true;
 				}
 			} catch (SCException e) {
 				e.printStackTrace();
-				
-			}
-			
+			}			
 		}
-		
-		return sender.isOp();
+		return false;
 	}
 
 	@Override
 	public void permissionCheck() {
 		// TODO Auto-generated method stub
-
 	}
 
 }

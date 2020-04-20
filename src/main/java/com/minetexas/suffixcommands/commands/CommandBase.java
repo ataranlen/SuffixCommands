@@ -2,25 +2,29 @@ package com.minetexas.suffixcommands.commands;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
-
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
+import java.util.List;
 
 import com.minetexas.suffixcommands.exception.SCException;
 import com.minetexas.suffixcommands.util.SCColor;
-import com.minetexas.suffixcommands.util.SCLog;
 
-public abstract class CommandBase implements CommandExecutor {
+import com.degoos.wetsponge.command.WSCommand;
+import com.degoos.wetsponge.command.WSCommandSource;
+import com.degoos.wetsponge.entity.living.player.WSPlayer;
+import com.degoos.wetsponge.text.WSText;
 
+
+public abstract class CommandBase extends WSCommand {
+	
+	public CommandBase(String name, String description) {
+		super(name, description);
+	}
 	protected HashMap<String, String> commands = new HashMap<String, String>();
 	protected String[] args;
-	protected CommandSender sender;
+	protected WSCommandSource sender;
 	
 	public abstract void init();
-	
 	protected String command = "FIXME";
 	protected String displayName = "FIXME";
 	protected boolean sendUnknownToDefault = false;
@@ -33,11 +37,10 @@ public abstract class CommandBase implements CommandExecutor {
 	
 	/* Called before command is executed to check permissions. */
 	public abstract void permissionCheck()  throws SCException;
- 
+	
 	@Override
-	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public void executeCommand(WSCommandSource sender, String cmd, String[] args) {
 		init();
-		
 		this.args = args;
 		this.sender = sender;
 		
@@ -45,7 +48,7 @@ public abstract class CommandBase implements CommandExecutor {
 			permissionCheck();
 		} catch (SCException e1) {
 			sendError(sender, e1.getMessage());
-			return false;
+			return;
 		}
 		
 		if (args.length == 0) {
@@ -54,12 +57,12 @@ public abstract class CommandBase implements CommandExecutor {
 			} catch (SCException e) {
 				sendError(sender, e.getMessage());
 			}
-			return false;
+			return;
 		}
 		
 		if (args[0].equalsIgnoreCase("help")) {
 			showHelp();
-			return true;
+			return;
 		}
 		
 		for (String c : commands.keySet()) {
@@ -68,7 +71,7 @@ public abstract class CommandBase implements CommandExecutor {
 						Method method = this.getClass().getMethod(args[0].toLowerCase()+"_cmd");
 						try {
 							method.invoke(this);
-							return true;
+							return;
 						} catch (IllegalAccessException | IllegalArgumentException e) {
 							e.printStackTrace();
 							sendError(sender, "Internal Command Exception");
@@ -89,11 +92,11 @@ public abstract class CommandBase implements CommandExecutor {
 							} catch (SCException e1) {
 								sendError(sender, e.getMessage());
 							}
-							return false;
+							return;
 						}
 						sendError(sender, "Unkown Command: "+args[0]);
 					}
-					return true;
+					return;
 				}
 			}
 			
@@ -103,38 +106,47 @@ public abstract class CommandBase implements CommandExecutor {
 				} catch (SCException e) {
 					sendError(sender, e.getMessage());
 				}
-				return false;
+				return;
 			}
 			
 			sendError(sender, "Unkown Command: "+args[0]);
-			return false;
+			return;
 	}
 	
-	public Player getPlayer() throws SCException {
-		if (sender instanceof Player) {
-			return (Player)sender;
+	public WSPlayer getPlayer() throws SCException {
+		if (sender instanceof WSPlayer) {
+			return (WSPlayer)sender;
 		}
 		throw new SCException("You must be a player to execute this command");
 	}
 	
-	public static void sendMessage(Object sender, String line) {
-		if ((sender instanceof Player)) {
+	public static void sendMessage(Object sender, WSText line) {
+		if ((sender instanceof WSPlayer)) {
 //			SCLog.debug(((Player) sender).getDisplayName()+" - "+line);
-			((Player) sender).sendMessage(line);
-		} else if (sender instanceof CommandSender) {
-			((CommandSender) sender).sendMessage(line);
+			((WSPlayer) sender).sendMessage(line);
+		} else if (sender instanceof WSCommandSource) {
+			((WSCommandSource) sender).sendMessage(line);
+		}
+	}
+	
+	public static void sendMessage(Object sender, String line) {
+		if ((sender instanceof WSPlayer)) {
+//			SCLog.debug(((Player) sender).getDisplayName()+" - "+line);
+			((WSPlayer) sender).sendMessage(line);
+		} else if (sender instanceof WSCommandSource) {
+			((WSCommandSource) sender).sendMessage(line);
 		}
 	}
 	public static void sendMessage(Object sender, String[] lines) {
 		boolean isPlayer = false;
-		if (sender instanceof Player)
+		if (sender instanceof WSPlayer)
 			isPlayer = true;
 
 		for (String line : lines) {
 			if (isPlayer) {
-				((Player) sender).sendMessage(line);
+				((WSPlayer) sender).sendMessage(line);
 			} else {
-				((CommandSender) sender).sendMessage(line);
+				((WSCommandSource) sender).sendMessage(line);
 			}
 		}
 	}
@@ -156,7 +168,7 @@ public abstract class CommandBase implements CommandExecutor {
 		return out;
 	}
 	
-	public static void sendHeading(CommandSender sender, String title) {	
+	public static void sendHeading(WSCommandSource sender, String title) {	
 		sendMessage(sender, buildTitle(title));
 	}
 	

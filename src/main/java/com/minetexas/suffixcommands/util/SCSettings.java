@@ -1,12 +1,9 @@
 package com.minetexas.suffixcommands.util;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -15,16 +12,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 
+import com.degoos.wetsponge.config.ConfigAccessor;
+import com.degoos.wetsponge.entity.living.player.WSPlayer;
+import com.degoos.wetsponge.user.WSUser;
 import com.minetexas.suffixcommands.Badge;
 import com.minetexas.suffixcommands.SuffixCommands;
 import com.minetexas.suffixcommands.database.SQL;
 import com.minetexas.suffixcommands.exception.InvalidConfiguration;
 
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
+import net.luckperms.api.cacheddata.CachedMetaData;
+import net.luckperms.api.cacheddata.CachedPermissionData;
+import net.luckperms.api.context.ContextManager;
+import net.luckperms.api.context.ImmutableContextSet;
+import net.luckperms.api.model.user.User;
+import net.luckperms.api.node.types.SuffixNode;
+import net.luckperms.api.query.QueryOptions;
+
 public class SCSettings {
+
+    private static ConfigAccessor badgeConfig; /* badges.yml */
 
 	public static SuffixCommands plugin;
 	public static final String BADGE = "suffixcommands.badge.set";
@@ -34,18 +43,20 @@ public class SCSettings {
 	public static final String PERMISSION_CHAT = "suffixcommands.chat.";
 	public static final String PERMISSION_CREATE = "suffixcommands.createbadges";
 	
-	public static Boolean hasHerochat = false;
+	public static Boolean hasLP = false;
 	
-	public static FileConfiguration badgeConfig; /* badges.yml */
+	public static LuckPerms luckPermsAPI = LuckPermsProvider.get();
+	
 	public static Map<String, ConfigBadges> legacyBadges = new HashMap<String, ConfigBadges>();
 
 	public static Map<String, Badge> badges = new HashMap<String, Badge>();
 	
-	public static void init(SuffixCommands plugin) throws FileNotFoundException, IOException, InvalidConfigurationException, InvalidConfiguration {
+	public static void init(SuffixCommands plugin) throws FileNotFoundException, IOException, InvalidConfiguration {
 		SCSettings.plugin = plugin;
 
-		SCSettings.hasHerochat = plugin.hasPlugin("Herochat");
-		SCLog.debug("Herochat enabled? "+SCSettings.hasHerochat);
+		SCSettings.hasLP = true;
+		SCLog.debug("LuckPerms enabled? "+SCSettings.hasLP);
+		
 		loadConfigFiles();
 		loadConfigObjects();
 		try {
@@ -88,7 +99,7 @@ public class SCSettings {
 		ConfigBadges.loadConfig(badgeConfig, legacyBadges);
 	}
 	
-	public static void reloadBadgeConfigFile() throws FileNotFoundException, IOException, InvalidConfigurationException, InvalidConfiguration
+	public static void reloadBadgeConfigFile() throws FileNotFoundException, IOException, InvalidConfiguration
 	{
 		legacyBadges.clear();
 		badgeConfig = loadConfig("badges.yml");
@@ -96,7 +107,7 @@ public class SCSettings {
 		ConfigBadges.loadConfig(badgeConfig, legacyBadges);
 	}
 	
-	public static FileConfiguration loadConfig(String filepath) throws FileNotFoundException, IOException, InvalidConfigurationException {
+	public static ConfigAccessor loadConfig(String filepath) throws FileNotFoundException, IOException {
 
 		File file = new File(plugin.getDataFolder().getPath()+"/"+filepath);
 		if (!file.exists()) {
@@ -106,9 +117,8 @@ public class SCSettings {
 		
 		SCLog.info("Loading Configuration file: "+filepath);
 		// read the config.yml into memory
-		YamlConfiguration cfg = new YamlConfiguration(); 
-		cfg.load(new InputStreamReader(new FileInputStream(file), Charset.forName("UTF-8")));
-		return cfg;
+		
+		return new ConfigAccessor(new File(plugin.getDataFolder(), filepath));
 	}
 	
 	public static String getStringBase(String path) throws InvalidConfiguration {
@@ -119,7 +129,7 @@ public class SCSettings {
 		return getInteger(badgeConfig, path);
 	}
 	
-	public static String getString(FileConfiguration cfg, String path) throws InvalidConfiguration {
+	public static String getString(ConfigAccessor cfg, String path) throws InvalidConfiguration {
 		String data = cfg.getString(path);
 		if (data == null) {
 			throw new InvalidConfiguration("Could not get configuration string "+path);
@@ -127,7 +137,7 @@ public class SCSettings {
 		return data;
 	}
 	
-	public static int getInteger(FileConfiguration cfg, String path) throws InvalidConfiguration {
+	public static int getInteger(ConfigAccessor cfg, String path) throws InvalidConfiguration {
 		if (!cfg.contains(path)) {
 			throw new InvalidConfiguration("Could not get configuration double "+path);
 		}
@@ -142,7 +152,44 @@ public class SCSettings {
 		FileUtils.copyURLToFile(inputUrl, dest);
 	}
 	
-	private static void loadConfigFiles() throws FileNotFoundException, IOException, InvalidConfigurationException {
+	private static void loadConfigFiles() throws FileNotFoundException, IOException {
 		badgeConfig = loadConfig("badges.yml");
 	}
+	
+	public WSUser loadUser(WSPlayer player) {
+	    // assert that the player is online
+	    if (!player.isOnline()) {
+	        throw new IllegalStateException("Player is offline");
+	    }
+	    return (WSUser) luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+	}
+	
+	public static String getSuffix(User user) {
+		ContextManager contextManager = LuckPermsProvider.get().getContextManager();
+	    ImmutableContextSet contextSet = contextManager.getContext(user).orElseGet(contextManager::getStaticContext);
+
+	    CachedMetaData metaData = user.getCachedData().getMetaData(QueryOptions.contextual(contextSet));
+
+	    return metaData.getSuffix();
+	}
+	
+	public static boolean hasPermission(User user, String permission) {
+	    ContextManager contextManager = LuckPermsProvider.get().getContextManager();
+	    ImmutableContextSet contextSet = contextManager.getContext(user).orElseGet(contextManager::getStaticContext);
+
+	    CachedPermissionData permissionData = user.getCachedData().getPermissionData(QueryOptions.contextual(contextSet));
+	    return permissionData.checkPermission(permission).asBoolean();
+	}
+	
+	public static void setSuffix(User user, String suffix) {
+		SuffixNode badgeNode = SuffixNode.builder(suffix, 150).build();
+		user.data().add(badgeNode);
+		LuckPermsProvider.get().getUserManager().saveUser(user);
+	}
+	
+	public static void setSuffix(WSPlayer player, String suffix) {
+		User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+		setSuffix(user, suffix);
+	}
+	
 }

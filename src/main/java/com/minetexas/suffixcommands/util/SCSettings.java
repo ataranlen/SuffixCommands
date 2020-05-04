@@ -13,6 +13,8 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 
+import com.degoos.wetsponge.WetSponge;
+import com.degoos.wetsponge.command.WSCommandSource;
 import com.degoos.wetsponge.config.ConfigAccessor;
 import com.degoos.wetsponge.entity.living.player.WSPlayer;
 import com.degoos.wetsponge.user.WSUser;
@@ -24,11 +26,9 @@ import com.minetexas.suffixcommands.exception.InvalidConfiguration;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.cacheddata.CachedMetaData;
-import net.luckperms.api.cacheddata.CachedPermissionData;
 import net.luckperms.api.context.ContextManager;
 import net.luckperms.api.context.ImmutableContextSet;
 import net.luckperms.api.model.user.User;
-import net.luckperms.api.node.types.SuffixNode;
 import net.luckperms.api.query.QueryOptions;
 
 public class SCSettings {
@@ -173,18 +173,10 @@ public class SCSettings {
 	    return metaData.getSuffix();
 	}
 	
-	public static boolean hasPermission(User user, String permission) {
-	    ContextManager contextManager = LuckPermsProvider.get().getContextManager();
-	    ImmutableContextSet contextSet = contextManager.getContext(user).orElseGet(contextManager::getStaticContext);
-
-	    CachedPermissionData permissionData = user.getCachedData().getPermissionData(QueryOptions.contextual(contextSet));
-	    return permissionData.checkPermission(permission).asBoolean();
-	}
-	
 	public static void setSuffix(User user, String suffix) {
-		SuffixNode badgeNode = SuffixNode.builder(suffix, 150).build();
-		user.data().add(badgeNode);
-		LuckPermsProvider.get().getUserManager().saveUser(user);
+		WSCommandSource server = WetSponge.getServer().getConsole();
+		server.performCommand("lp user "+ user.getUsername() +" meta clear suffixes");
+		server.performCommand("lp user "+ user.getUsername() +" meta setsuffix 150 \"" + suffix + "\"");
 	}
 	
 	public static void setSuffix(WSPlayer player, String suffix) {

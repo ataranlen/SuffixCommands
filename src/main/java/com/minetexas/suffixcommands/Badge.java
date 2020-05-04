@@ -105,7 +105,9 @@ public class Badge extends SQLObject {
 				CompletableFuture<User> userFuture = userManager.loadUser(guid);
 				userFuture.thenAcceptAsync(user -> {
 					String suffix = SCSettings.getSuffix(user);
-					if (suffix.equals(" "+getBadgeText())) {
+					SCLog.debug("Current Suffix '" + suffix + "'");
+					SCLog.debug("new Suffix '" + oldBadgeText + "'");
+					if (suffix.equals(oldBadgeText)) {
 						SCSettings.setSuffix(user, badgeText);
 					}
 			    });
@@ -266,5 +268,15 @@ public class Badge extends SQLObject {
 		}
 		
 		return out;
+	}
+
+	public void changeHands(String ownerUUID) throws SQLException {
+		String oldOwner = getOwnerUUID();
+		this.ownerUUID = ownerUUID;
+		if (isLeader(ownerUUID).booleanValue()) {
+			removeLeaderUUID(ownerUUID); 
+			addLeaderUUID(oldOwner);
+			saveNow();
+		}
 	}
 }

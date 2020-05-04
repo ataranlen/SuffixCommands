@@ -53,7 +53,8 @@ public class BadgeCommand extends CommandBase {
 		commands.put("members", "List all members of the named badge group");
 		commands.put("create", "Create a new badge group. [Admin Only] Usage: /badge create [name] [owner] [badgeText] [Chat Color Code]");
 		commands.put("rename", "Rename a badge group. Usage: /badge rename [name] [newname] [badgeText]");
-		
+		commands.put("setowner", "Give ownership of the badge to someone else. [Permanent]");
+		commands.put("delete", "Deletes a badge [Admin Only]");
 		commands.put("reload", "Reload Badges from the Config [Admin Only]");
 	}
 	
@@ -81,7 +82,7 @@ public class BadgeCommand extends CommandBase {
 					player = getPlayer();
 					player.sendMessage(WSText.of(SCColor.Green+"Badge Set to:"+legacyBadge.badgeText).toBuilder().translateColors().build());
 					User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
-					SCSettings.setSuffix(user, " "+ legacyBadge.badgeText);
+					SCSettings.setSuffix(user, legacyBadge.badgeText);
 				} catch (SCException e) {
 					e.printStackTrace();
 				}
@@ -95,7 +96,7 @@ public class BadgeCommand extends CommandBase {
 			if (badge.canUseBadge(playerUUID)) {
 				player.sendMessage(WSText.of(SCColor.Green+"Badge Set to:"+badge.getBadgeText()).toBuilder().translateColors().build());
 				User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
-				SCSettings.setSuffix(user, " "+ badge.getBadgeText());
+				SCSettings.setSuffix(user, badge.getBadgeText());
 			}else {
 				sendMessage(sender, SCColor.Red+"You don't have 'use' access to the "+badge.getName()+" Badge.");
 			}
@@ -244,8 +245,9 @@ public class BadgeCommand extends CommandBase {
 				badge.removeLeaderUUID(playerUUID);
 				User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
 				String suffix = SCSettings.getSuffix(user);
-				if (suffix.equals(" "+badge.getBadgeText())) {
-					SCSettings.setSuffix(user, "");
+				if (suffix.equals(badge.getBadgeText())) {
+					WSCommandSource server = WetSponge.getServer().getConsole();
+					server.performCommand("lp user "+ user.getUsername() +" meta clear suffixes");
 				}
 			
 			} else if (badge.canGiveBadge(senderUUID)) {
@@ -292,8 +294,9 @@ public class BadgeCommand extends CommandBase {
 
 			User user = SCSettings.luckPermsAPI.getUserManager().getUser(senderUUID);
 			String suffix = SCSettings.getSuffix(user);
-			if (suffix.equals(" "+badge.getBadgeText())) {
-				SCSettings.setSuffix(user, "");
+			if (suffix.equals(badge.getBadgeText())) {
+				WSCommandSource server = WetSponge.getServer().getConsole();
+				server.performCommand("lp user "+ user.getUsername() +" meta clear suffixes");
 			}
 
 			sendMessage(sender, SCColor.Red+"You have given up access to the '"+badge.getName()+"' Badge Group.");
@@ -379,7 +382,8 @@ public class BadgeCommand extends CommandBase {
 		try {
 			player = getPlayer();
 			sendMessage(sender, SCColor.LightGreen+"Badge removed");
-			SCSettings.setSuffix(player, "");
+			WSCommandSource server = WetSponge.getServer().getConsole();
+			server.performCommand("lp user "+ player.getName() +" meta clear suffixes");
 		} catch (SCException e) {
 			e.printStackTrace();
 		}
@@ -498,6 +502,35 @@ public class BadgeCommand extends CommandBase {
 		}
 	}
 	
+	public void setowner_cmd() throws SCException {
+		if (this.args.length < 2) {
+			throw new SCException("Enter a Badge Name. /badge setowner [badge] [player]");
+		}
+		if (this.args.length < 3) {
+			throw new SCException("Enter the new Owner for the badge. Use /badge setowner [badge] [player]");
+		}
+		String playerName = this.args[2];
+		WSPlayer player = getPlayer();
+		String playerUUID = player.getUniqueId().toString();
+		try {
+			WSPlayer newPlayer;
+			newPlayer = WetSponge.getServer().getPlayer(playerName).orElseThrow(WSPlayerNotFoundException::new);
+			String newplayerUUID = newPlayer.getUniqueId().toString();
+			Badge badge = (Badge)SCSettings.badges.get(this.args[1]);
+			if (badge == null)
+				throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization"); 
+			if (badge.canShareBadge(playerUUID).booleanValue() || permissionCheck("suffixcommands.createbadges").booleanValue())
+			  try {
+			    badge.changeHands(newplayerUUID);
+			  } catch (SQLException e) {
+			    e.printStackTrace();
+			  }  
+		} catch (WSPlayerNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	}
+	
 	public void rename_cmd() throws SCException {
 		if (args.length < 2) {
 			throw new SCException("Enter a Badge Name");
@@ -548,6 +581,21 @@ public class BadgeCommand extends CommandBase {
 				throw new SCException("Badge already exists");
 			}
 		}
+	}
+	
+	  public void delete_cmd() throws SCException {
+		  try {
+		        if (permissionCheck(SCSettings.PERMISSION_CREATE))
+		            throw new SCException("You must be an Admin to do this"); 
+		        if (this.args.length != 2)
+		            throw new SCException("Enter a group Badge Name"); 
+		        Badge badge = (Badge)SCSettings.badges.get(this.args[1]);
+		        if (badge == null)
+		        	throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization"); 
+		        badge.delete();
+		    } catch (SQLException e) {
+		    	e.printStackTrace();
+		    } 
 	}
 	
 	public void reload_cmd() throws SCException {

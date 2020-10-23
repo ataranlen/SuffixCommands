@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import com.minetexas.suffixcommands.Badge;
+import com.minetexas.suffixcommands.Gang;
 import com.minetexas.suffixcommands.exception.InvalidConfiguration;
 import com.minetexas.suffixcommands.util.SCLog;
 import com.minetexas.suffixcommands.util.SCSettings;
@@ -62,10 +63,10 @@ public class SQL {
 	public static void initBadgeObjectTables() throws SQLException {	
 		SCLog.heading("Building Badge Object Tables.");
 		Badge.init();	
+		Gang.init();	
 		SCLog.info("----- Done Building Tables ----");
 	}
-	
-	
+
 	public static Connection getGameConnection() throws SQLException {
 
 		return badgeDatabase.getConnection();

@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.minetexas.suffixcommands.Gang;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -28,8 +29,11 @@ public class SCSettings {
 
 	public static SuffixCommands plugin;
 	public static final String BADGE = "suffixcommands.badge.set";
+	public static final String HAT = "suffixcommands.hat.set";
 	public static final String GROUP_BASE = "suffixcommands.badgegroup.";
+	public static final String GROUP_BASE_HAT = "suffixcommands.hatgroup.";
 	public static final String GROUPSHARE_BASE = "suffixcommands.sharegroup.";
+	public static final String PERMISSION_BASE_HAT = "suffixcommands.hat.";
 	public static final String PERMISSION_BASE = "suffixcommands.badge.";
 	public static final String PERMISSION_CHAT = "suffixcommands.chat.";
 	public static final String PERMISSION_CREATE = "suffixcommands.createbadges";
@@ -40,6 +44,7 @@ public class SCSettings {
 	public static Map<String, ConfigBadges> legacyBadges = new HashMap<String, ConfigBadges>();
 
 	public static Map<String, Badge> badges = new HashMap<String, Badge>();
+	public static Map<String, Gang> gangs = new HashMap<String, Gang>();
 	
 	public static void init(SuffixCommands plugin) throws FileNotFoundException, IOException, InvalidConfigurationException, InvalidConfiguration {
 		SCSettings.plugin = plugin;
@@ -52,6 +57,7 @@ public class SCSettings {
 			SQL.initialize();
 			SQL.initBadgeObjectTables();
 			loadBadges();
+			loadGangs();
 		} catch (ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		}
@@ -82,6 +88,33 @@ public class SCSettings {
 			SQL.close(rs, ps, context);
 		}
 		
+	}
+
+	private static void loadGangs() throws SQLException {
+		Connection context = null;
+		ResultSet rs = null;
+		PreparedStatement ps = null;
+
+		try {
+			context = SQL.getGameConnection();
+			ps = context.prepareStatement("SELECT * FROM "+SQL.tb_prefix+ Gang.TABLE_NAME);
+			rs = ps.executeQuery();
+			int count = 0;
+
+			while(rs.next()) {
+				try {
+					Gang gang = new Gang(rs);
+					gangs.put(gang.getName(), gang);
+					count++;
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			SCLog.info("Loaded "+count+" Gangs from SQL");
+		} finally {
+			SQL.close(rs, ps, context);
+		}
+
 	}
 
 	private static void loadConfigObjects() throws InvalidConfiguration {

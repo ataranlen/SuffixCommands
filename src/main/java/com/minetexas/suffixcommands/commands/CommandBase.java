@@ -11,7 +11,6 @@ import org.bukkit.entity.Player;
 
 import com.minetexas.suffixcommands.exception.SCException;
 import com.minetexas.suffixcommands.util.SCColor;
-import com.minetexas.suffixcommands.util.SCLog;
 
 public abstract class CommandBase implements CommandExecutor {
 

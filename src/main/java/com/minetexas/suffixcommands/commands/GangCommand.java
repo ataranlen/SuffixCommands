@@ -572,11 +572,14 @@ public class GangCommand extends CommandBase {
 
 		if (player.has("prefix.style.&l")) {
 			prefix += "&l";
-		} else if (player.has("prefix.style.&o")) {
+		}
+		if (player.has("prefix.style.&o")) {
 			prefix += "&o";
-		} else if (player.has("prefix.style.&m")) {
+		}
+		if (player.has("prefix.style.&m")) {
 			prefix += "&m";
-		} else if (player.has("prefix.style.&n")) {
+		}
+		if (player.has("prefix.style.&n")) {
 			prefix += "&n";
 		}
 
@@ -628,11 +631,14 @@ public class GangCommand extends CommandBase {
 
 		if (player.hasPermission("prefix.style.&l")) {
 			prefix += "&l";
-		} else if (player.hasPermission("prefix.style.&o")) {
+		} 
+		if (player.hasPermission("prefix.style.&o")) {
 			prefix += "&o";
-		} else if (player.hasPermission("prefix.style.&m")) {
+		}
+		if (player.hasPermission("prefix.style.&m")) {
 			prefix += "&m";
-		} else if (player.hasPermission("prefix.style.&n")) {
+		}
+		if (player.hasPermission("prefix.style.&n")) {
 			prefix += "&n";
 		}
 

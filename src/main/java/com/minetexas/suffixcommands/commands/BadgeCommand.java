@@ -31,21 +31,22 @@ public class BadgeCommand extends CommandBase {
 		command = "/badge";
 		displayName = "Manage Your Badges. Badge names are case sensitive.";
 
-		commands.put("set", "Change your badge to one you own. Usage: /badge set [name]");
-		commands.put("give", "Grant a player access to a group badge. Usage: /badge give [name] [player]");
-		commands.put("take", "Remove a player's access to a group badge. Usage: /badge take [name] [player]");
-		commands.put("share", "Grant a player access to give a group badge. Usage: /badge share [name] [player]");
+		commands.put("set", "Change your badge to one you own. Usage: /badge set [badge]");
+		commands.put("give", "Grant a player access to a group badge. Usage: /badge give [badge] [player]");
+		commands.put("take", "Remove a player's access to a group badge. Usage: /badge take [badge] [player]");
+		commands.put("share", "Grant a player access to give a group badge. Usage: /badge share [badge] [player]");
 		commands.put("leave", "Leave a group badge");
 		commands.put("remove", "Remove your current badge");
 		commands.put("owned", "List all your owned badges");
 		commands.put("group", "List all your group badges");
 		commands.put("list", "List all possible badges");
 		commands.put("members", "List all members of the named badge group");
-		commands.put("create",
-				"Create a new badge group. [Admin Only] Usage: /badge create [name] [owner] [badgeText] [Chat Color Code]");
-		commands.put("rename", "Rename a badge group. Usage: /badge rename [name] [newname] [badgeText]");
+		commands.put("setowner", "Transfer Ownership of the badge. Usage: /badge setowner [badge] [newOwnerName]");
+		commands.put("create", "Create a new badge group. [Admin Only] Usage: /badge create [badge] [owner] [badgeText] [Chat Color Code]");
+		commands.put("rename", "Rename a badge group. Usage: /badge rename [badge] [newname] [badgeText]");
 		commands.put("delete", "Deletes a badge [Admin Only]");
 		commands.put("reload", "Reload Badges from the Config [Admin Only]");
+		commands.put("rerun", "Debug Command [Admin Only]");
 	}
 
 	public void set_cmd() throws SCException {
@@ -548,18 +549,47 @@ public class BadgeCommand extends CommandBase {
 			if ((newBadge == null && badgeFromText == null) || name.equals(newName)) {
 				try {
 					badge.rename(newName, " " + badgeText);
+					SCLog.debug("Done: senderName:"+ playerUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
 					sendMessage(sender,
 							SCColor.Green + "'" + name + "' has been renamed to '" + newName
 									+ "' with the badgeText of '"
 									+ ChatColor.translateAlternateColorCodes('&', badgeText) + SCColor.Green + "'");
 				} catch (InvalidNameException e) {
 					SCLog.exception("Badge Save failed", e);
+					SCLog.debug("Error: senderName:"+ playerUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
 					throw new SCException("Badge save failed, Contact an admin.");
 				}
 			} else {
+				SCLog.debug("Error: senderName:"+ playerUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
 				throw new SCException("Badge already exists");
 			}
 		}
+	}
+	
+	public void setowner_cmd() throws SCException {
+		if (this.args.length < 2) {
+			throw new SCException("Enter a Badge Name. /badge setowner [badge] [player]");
+		}
+		if (this.args.length < 3) {
+			throw new SCException("Enter the new Owner for the badge. Use /badge setowner [badge] [player]");
+		}
+		String playerName = this.args[2];
+		Player player = getPlayer();
+		String playerUUID = player.getUniqueId().toString();
+
+		@SuppressWarnings("deprecation")
+		OfflinePlayer newPlayer = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
+		String newplayerUUID = newPlayer.getUniqueId().toString();
+		Badge badge = (Badge)SCSettings.badges.get(this.args[1]);
+		if (badge == null)
+			throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization"); 
+		if (badge.canShareBadge(playerUUID).booleanValue() || permissionCheck("suffixcommands.createbadges").booleanValue())
+		  try {
+		    badge.changeHands(newplayerUUID);
+			sendMessage(sender, SCColor.Green+"Changed owner of '"+badge.getName()+"' Gang to '" + newPlayer.getName());
+		  } catch (SQLException e) {
+		    e.printStackTrace();
+		  }  
 	}
 
 	public void reload_cmd() throws SCException {
@@ -572,6 +602,155 @@ public class BadgeCommand extends CommandBase {
 
 		}
 	}
+	
+	public void rerun_cmd() throws SCException {
+		String senderUUID = args[1];
+
+		args[0] = "";
+		args[1] = "";
+		String commandType = args[2].toLowerCase();
+		
+		if (commandType.equals("rename")) {
+			if (args.length < 6) {
+				throw new SCException("Missing Badge Display name");
+			} else if (args.length > 6) {
+				throw new SCException("Invalid Badge Name.");
+			}
+			
+			String name = args[3];
+			String newName = args[4];
+			String badgeText = args[5];
+
+			newName = newName.replaceAll("§", "");
+			newName = newName.replaceAll("&", "");
+			badgeText = badgeText.replaceAll("§", "&");
+			badgeText = badgeText.replaceAll("&k", "");
+			if (newName.length() >= 16 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
+
+				SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
+				throw new SCException("Please limit your New name to 10 characters.");
+			}
+			if (badgeText.length() >= 20 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
+
+				SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
+				throw new SCException("Please limit your displayText to 12 characters.");
+			}
+
+
+			Badge badge = SCSettings.badges.get(args[1]);
+			if (badge == null) {
+				SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
+				throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization");
+			}
+
+			if (badge.canShareBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
+
+				Badge newBadge = SCSettings.badges.get(newName);
+				Badge badgeFromText = null;
+			
+				Map<String, Badge> badges = SCSettings.badges;
+				for (String key : badges.keySet()) {
+				    Badge b = badges.get(key);
+					if (b.getBadgeText().equals(badgeText)) {
+						badgeFromText = b;
+						break;
+					}   
+				}
+				if ((newBadge == null && badgeFromText == null) || name.equals(newName)) {
+					try {
+						badge.rename(newName, " " + badgeText);
+						SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
+						sendMessage(sender,
+								SCColor.Green + "'" + name + "' has been renamed to '" + newName
+										+ "' with the badgeText of '"
+										+ ChatColor.translateAlternateColorCodes('&', badgeText) + SCColor.Green + "'");
+					} catch (InvalidNameException e) {
+						SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
+						throw new SCException("Badge save failed, Contact an admin.");
+					}
+				} else {
+					SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
+					throw new SCException("Badge already exists");
+				}
+			}
+			return;
+		}
+		
+		String playerUUID = args[4];
+		StringBuilder builder = new StringBuilder();
+		builder.append("badge");
+		for(String s : args) {
+			if (s.length() >= 1) {
+				builder.append(" "+s);
+			}
+		}
+		
+
+		Badge badge = SCSettings.badges.get(args[3]);
+		if (badge == null) {
+			throw new SCException("Badge Not Found");
+		}
+
+		
+		if (senderUUID.equals(playerUUID)) {
+			throw new SCException("Same Player");
+		}
+
+		String command = builder.toString();
+		if (commandType.equals("give")) {
+			if (badge.canGiveBadge(senderUUID)) {
+				if (badge.canUseBadge(playerUUID)) {
+					throw new SCException(playerUUID + " already has 'use' access to the '" + badge.getName() + "' Badge Group.");
+				}
+				badge.addMemberUUID(playerUUID);
+				SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: "+command);
+
+			} else {
+				throw new SCException("Player missing permission");
+			}
+			return;
+		}
+		if (commandType.equals("take")) {
+			if (badge.canShareBadge(senderUUID) && badge.canGiveBadge(playerUUID)) {
+				sendMessage(sender, SCColor.Green + "Removed " + playerUUID + " 'give' access to the '"
+						+ badge.getName() + "' Badge Group");
+
+				badge.removeLeaderUUID(playerUUID);
+				SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: "+command);
+
+			} else if (badge.canGiveBadge(senderUUID)) {
+				if (badge.canShareBadge(playerUUID)) {
+					throw new SCException("You cannot remove the owner from the '" + badge.getName() + "' Badge Group.");
+				} else if (badge.canGiveBadge(playerUUID)) {
+					throw new SCException("You cannot remove another Leader from the '" + badge.getName() + "' Badge Group.");
+				}
+
+				badge.removeMemberUUID(playerUUID);
+				SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: "+command);
+			} else {
+				throw new SCException("Player missing permission");
+			}
+			return;
+		}
+
+		if (commandType.equals("share")) {
+			if (badge.canGiveBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
+				if (badge.canGiveBadge(playerUUID)) {
+					throw new SCException(
+							playerUUID + " already has 'give' access to the '" + badge.getName() + "' Badge Group.");
+				}
+
+				badge.addLeaderUUID(playerUUID);
+				SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: "+command);
+			} else {
+				throw new SCException("Player missing permission");
+			}
+			return;
+		}
+		
+		SCLog.debug("Failed: uuid:"+ senderUUID +"; cmd: "+command);
+		
+	}
 
 	@Override
 	public void doDefaultAction() {
@@ -580,15 +759,16 @@ public class BadgeCommand extends CommandBase {
 	}
 
 	public void delete_cmd() throws SCException {
-	  try {
-        if (permissionCheck(SCSettings.PERMISSION_CREATE))
-            throw new SCException("You must be an Admin to do this"); 
-        if (this.args.length != 2)
-            throw new SCException("Enter a group Badge Name"); 
-        Badge badge = (Badge)SCSettings.badges.get(this.args[1]);
-        if (badge == null)
-        	throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization"); 
-        badge.delete();
+		try {
+			if (!permissionCheck(SCSettings.BADGE))
+	            throw new SCException("You must be an Admin to do this"); 
+	        if (this.args.length != 2)
+	            throw new SCException("Enter a group Badge Name"); 
+	        Badge badge = (Badge)SCSettings.badges.get(this.args[1]);
+	        if (badge == null)
+	        	throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization"); 
+	        badge.delete();
+			sendMessage(sender, SCColor.Red+"Deleted '"+badge.getName()+"' Badge.");
 	    } catch (SQLException e) {
 	    	e.printStackTrace();
 	    }
@@ -596,15 +776,7 @@ public class BadgeCommand extends CommandBase {
 
 	@Override
 	public void showHelp() {
-		Player player;
-		try {
-			player = getPlayer();
-		} catch (SCException e) {
-			e.printStackTrace();
-			return;
-		}
-
-		if (!player.isOp() && !player.hasPermission(SCSettings.BADGE)) {
+		if (permissionCheck(SCSettings.BADGE)) {
 			return;
 		}
 

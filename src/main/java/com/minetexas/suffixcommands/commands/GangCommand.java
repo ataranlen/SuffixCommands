@@ -1,5 +1,6 @@
 package com.minetexas.suffixcommands.commands;
 
+import com.minetexas.suffixcommands.Badge;
 import com.minetexas.suffixcommands.Gang;
 import com.minetexas.suffixcommands.exception.InvalidNameException;
 import com.minetexas.suffixcommands.exception.SCException;
@@ -24,15 +25,16 @@ public class GangCommand extends CommandBase {
 		command = "/gang";
 		displayName = "Manage Your Gangs. Gang names are case sensitive.";
 		
-		commands.put("set", "Change your gang to one you can use. Usage: /gang set [name]");
-		commands.put("give", "Grant a player access to a gang. Usage: /gang give [name] [player]");
-		commands.put("take", "Remove a player's access to a gang. Usage: /gang take [name] [player]");
-		commands.put("share", "Grant a player access to give a gang. Usage: /gang share [name] [player]");
+		commands.put("set", "Change your gang to one you can use. Usage: /gang set [gang]");
+		commands.put("give", "Grant a player access to a gang. Usage: /gang give [gang] [player]");
+		commands.put("take", "Remove a player's access to a gang. Usage: /gang take [gang] [player]");
+		commands.put("share", "Grant a player access to give a gang. Usage: /gang share [gang] [player]");
 		commands.put("leave", "Leave a gang");
 		commands.put("remove", "Remove your current gang");
 		commands.put("owned", "List all your owned gangs");
 		commands.put("group", "List all your gangs");
 		commands.put("members", "List all members of the named gang");
+		commands.put("setowner", "Transfer Ownership of the gang. Usage: /gang setowner [gang] [newOwnerName]");
 		commands.put("create", "Create a new gang. [Admin Only] Usage: /gang create [name] [owner] [gangText] [Cgang Color Code]");
 		commands.put("rename", "Rename a gang. [Admin Only] Usage: /gang rename [name] [newname] [gangText]");
 		commands.put("delete", "Deletes a gang [Admin Only]");
@@ -458,7 +460,6 @@ public class GangCommand extends CommandBase {
 		}
 
 		if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
-			
 			Gang newGang = SCSettings.gangs.get(newName);
 			if (newGang == null || name.equals(newName)) {
 				try {
@@ -474,9 +475,35 @@ public class GangCommand extends CommandBase {
 		}
 	}
 	
+	public void setowner_cmd() throws SCException {
+		if (this.args.length < 2) {
+			throw new SCException("Enter a Gang Name. /gang setowner [gang] [player]");
+		}
+		if (this.args.length < 3) {
+			throw new SCException("Enter the new Owner for the gang. Use /gang setowner [gang] [player]");
+		}
+		String playerName = this.args[2];
+		Player player = getPlayer();
+		String playerUUID = player.getUniqueId().toString();
+
+		@SuppressWarnings("deprecation")
+		OfflinePlayer newPlayer = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
+		String newplayerUUID = newPlayer.getUniqueId().toString();
+		Gang badge = (Gang)SCSettings.gangs.get(this.args[1]);
+		if (badge == null)
+			throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization"); 
+		if (badge.canShareGang(playerUUID).booleanValue() || permissionCheck("suffixcommands.createbadges").booleanValue())
+		  try {
+		    badge.changeHands(newplayerUUID);
+			sendMessage(sender, SCColor.Green+"Changed owner of '"+badge.getName()+"' Gang to '" + newPlayer.getName());
+		  } catch (SQLException e) {
+		    e.printStackTrace();
+		  }  
+	}
+	
 	public void delete_cmd() throws SCException {
 		try {
-			if (permissionCheck(SCSettings.PERMISSION_CREATE))
+			if (!permissionCheck(SCSettings.PERMISSION_CREATE))
 				throw new SCException("You must be an Admin to do this"); 
 			if (this.args.length != 2)
 				throw new SCException("Enter a group Badge Name"); 
@@ -484,6 +511,8 @@ public class GangCommand extends CommandBase {
 			if (badge == null)
 				throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization"); 
 	        	badge.delete();
+				sendMessage(sender, SCColor.Red+"Deleted '"+badge.getName()+"' Gang.");
+
     	} catch (SQLException e) {
     		e.printStackTrace();
     	} 
@@ -497,15 +526,7 @@ public class GangCommand extends CommandBase {
 
 	@Override
 	public void showHelp() {
-		Player player;
-		try {
-			player = getPlayer();
-		} catch (SCException e) {
-			e.printStackTrace();
-			return;
-		}
-		
-		if (!player.isOp() && !player.hasPermission(SCSettings.HAT)) {
+		if (!permissionCheck(SCSettings.HAT)) {
 			return;
 		}
 		

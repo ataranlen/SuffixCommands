@@ -254,4 +254,14 @@ public class Badge extends SQLObject {
 		
 		return out;
 	}
+
+	public void changeHands(String ownerUUID) throws SQLException {
+		String oldOwner = getOwnerUUID();
+		this.ownerUUID = ownerUUID;
+		if (isLeader(ownerUUID).booleanValue()) {
+			removeLeaderUUID(ownerUUID); 
+			addLeaderUUID(oldOwner);
+			saveNow();
+		}
+	}
 }

@@ -65,3 +65,5 @@ $RECYCLE.BIN/
 /target/
 
 SuffixCommands*.iml
+
+.metadata/

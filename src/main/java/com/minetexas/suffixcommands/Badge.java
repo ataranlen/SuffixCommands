@@ -32,21 +32,21 @@ public class Badge extends SQLObject {
 	
 	public static void init() throws SQLException {
 		if (!SQL.hasTable(TABLE_NAME)) {
-			String table_create = "CREATE TABLE " + SQL.tb_prefix + TABLE_NAME+" (" + 
+			String table_create = "CREATE TABLE " + SQL.tb_prefix + TABLE_NAME + " (" + 
 					"`id` int(11) unsigned NOT NULL auto_increment," +
 					"`name` VARCHAR(64) NOT NULL," + 
 					"`badgeText` VARCHAR(64) NOT NULL," + 
 					"`chatColor` VARCHAR(64) NOT NULL," + 
 					"`ownerUUID` mediumtext," +
-					"`leaderUUIDs` mediumtext DEFAULT NULL, "+
-					"`memberUUIDs` mediumtext DEFAULT NULL, "+
+					"`leaderUUIDs` mediumtext DEFAULT NULL, " + 
+					"`memberUUIDs` mediumtext DEFAULT NULL, " + 
 					"UNIQUE KEY (`name`), " +
 				"PRIMARY KEY (`id`)" + ")";
 			
 			SQL.makeTable(table_create);
-			SCLog.info("Created "+TABLE_NAME+" table");
+			SCLog.info("Created " + TABLE_NAME + " table");
 		} else {
-			SCLog.info(TABLE_NAME+" table OK!");
+			SCLog.info(TABLE_NAME + " table OK!");
 		}
 	}
 	
@@ -101,7 +101,7 @@ public class Badge extends SQLObject {
 		if (!oldBadgeText.equals(badgeText)) {
 			//Loop through all players who own the badge and are using the badge.
 
-			UserManager userManager = SCSettings.luckPermsAPI.getUserManager();
+			UserManager userManager = SCSettings.getLuckPermsAPI().getUserManager();
 			for (String uuid : getAllPlayersWithAccess()) {
 				UUID guid = UUID.fromString(uuid);
 				CompletableFuture<User> userFuture = userManager.loadUser(guid);
@@ -121,7 +121,7 @@ public class Badge extends SQLObject {
 		try {
 			this.saveNow();
 		} catch (SQLException e) {
-			SCLog.exception("Failed to rename badge: '"+oldName+"' -> '"+name+"'" , e);
+			SCLog.exception("Failed to rename badge: '" + oldName + "' -> '" + name + "'" , e);
 			e.printStackTrace();
 		}
 	}
@@ -249,7 +249,7 @@ public class Badge extends SQLObject {
 		String out = "";
 		
 		for (String uuid : uuidList) {
-			out += uuid+",";
+			out += uuid + ",";
 		}
 		
 		return out;

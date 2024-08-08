@@ -48,7 +48,7 @@ public class SQLUpdate implements Runnable {
 	public void run() {	
 		while(true) {
 			try {
-				if (SuffixCommands.isDisable) {
+				if (SuffixCommands.getInstance().isDisabled()) {
 					break;
 				}
 				SQLObject obj = saveObjects.poll();

@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.minetexas.suffixcommands.Gang;
+import lombok.Getter;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.cacheddata.CachedMetaData;
@@ -41,28 +42,25 @@ public class SCSettings {
 	public static final String BADGE = "suffixcommands.badge.set";
 	public static final String HAT = "suffixcommands.hat.set";
 	public static final String GROUP_BASE = "suffixcommands.badgegroup.";
-	public static final String GROUP_BASE_HAT = "suffixcommands.hatgroup.";
 	public static final String GROUPSHARE_BASE = "suffixcommands.sharegroup.";
-	public static final String PERMISSION_BASE_HAT = "suffixcommands.hat.";
 	public static final String PERMISSION_BASE = "suffixcommands.badge.";
 	public static final String PERMISSION_CHAT = "suffixcommands.chat.";
 	public static final String PERMISSION_CREATE = "suffixcommands.createbadges";
 	
-	public static Boolean hasHerochat = false;
+	@Getter private static boolean usingHerochat = false;
 	
 	public static FileConfiguration badgeConfig; /* badges.yml */
-	public static Map<String, ConfigBadges> legacyBadges = new HashMap<String, ConfigBadges>();
+	public static Map<String, ConfigBadges> legacyBadges = new HashMap<>();
 
-	public static Map<String, Badge> badges = new HashMap<String, Badge>();
-	public static Map<String, Gang> gangs = new HashMap<String, Gang>();
+	public static Map<String, Badge> badges = new HashMap<>();
+	public static Map<String, Gang> gangs = new HashMap<>();
 
-	public static LuckPerms luckPermsAPI = LuckPermsProvider.get();
+	@Getter private static LuckPerms luckPermsAPI = LuckPermsProvider.get();
 	
 	public static void init(SuffixCommands plugin) throws FileNotFoundException, IOException, InvalidConfigurationException, InvalidConfiguration {
-		SCSettings.plugin = plugin;
 
-		SCSettings.hasHerochat = plugin.hasPlugin("Herochat");
-		SCLog.debug("Herochat enabled? "+SCSettings.hasHerochat);
+		SCSettings.usingHerochat = plugin.hasPlugin("Herochat");
+		SCLog.debug("Herochat enabled? " + SCSettings.usingHerochat);
 		loadConfigFiles();
 		loadConfigObjects();
 		try {
@@ -82,7 +80,7 @@ public class SCSettings {
 		
 		try {
 			context = SQL.getGameConnection();		
-			ps = context.prepareStatement("SELECT * FROM "+SQL.tb_prefix+Badge.TABLE_NAME);
+			ps = context.prepareStatement("SELECT * FROM " + SQL.tb_prefix + Badge.TABLE_NAME);
 			rs = ps.executeQuery();
 			int count = 0;
 			
@@ -95,7 +93,7 @@ public class SCSettings {
 					e.printStackTrace();
 				}
 			}
-			SCLog.info("Loaded "+count+" Badges from SQL");
+			SCLog.info("Loaded " + count + " Badges from SQL");
 		} finally {
 			SQL.close(rs, ps, context);
 		}
@@ -109,7 +107,7 @@ public class SCSettings {
 
 		try {
 			context = SQL.getGameConnection();
-			ps = context.prepareStatement("SELECT * FROM "+SQL.tb_prefix+ Gang.TABLE_NAME);
+			ps = context.prepareStatement("SELECT * FROM " + SQL.tb_prefix+ Gang.TABLE_NAME);
 			rs = ps.executeQuery();
 			int count = 0;
 
@@ -122,7 +120,7 @@ public class SCSettings {
 					e.printStackTrace();
 				}
 			}
-			SCLog.info("Loaded "+count+" Gangs from SQL");
+			SCLog.info("Loaded " + count + " Gangs from SQL");
 		} finally {
 			SQL.close(rs, ps, context);
 		}
@@ -143,13 +141,13 @@ public class SCSettings {
 	
 	public static FileConfiguration loadConfig(String filepath) throws FileNotFoundException, IOException, InvalidConfigurationException {
 
-		File file = new File(plugin.getDataFolder().getPath()+"/"+filepath);
+		File file = new File(plugin.getDataFolder().getPath() + "/" + filepath);
 		if (!file.exists()) {
-			SCLog.warning("Configuration file: '"+filepath+"' was missing. Streaming to disk from Jar.");
-			streamResourceToDisk("/"+filepath);
+			SCLog.warning("Configuration file: '" + filepath + "' was missing. Streaming to disk from Jar.");
+			streamResourceToDisk("/" + filepath);
 		}
 		
-		SCLog.info("Loading Configuration file: "+filepath);
+		SCLog.info("Loading Configuration file: " + filepath);
 		// read the config.yml into memory
 		YamlConfiguration cfg = new YamlConfiguration(); 
 		cfg.load(new InputStreamReader(new FileInputStream(file), Charset.forName("UTF-8")));
@@ -167,14 +165,14 @@ public class SCSettings {
 	public static String getString(FileConfiguration cfg, String path) throws InvalidConfiguration {
 		String data = cfg.getString(path);
 		if (data == null) {
-			throw new InvalidConfiguration("Could not get configuration string "+path);
+			throw new InvalidConfiguration("Could not get configuration string " + path);
 		}
 		return data;
 	}
 	
 	public static int getInteger(FileConfiguration cfg, String path) throws InvalidConfiguration {
 		if (!cfg.contains(path)) {
-			throw new InvalidConfiguration("Could not get configuration double "+path);
+			throw new InvalidConfiguration("Could not get configuration double " + path);
 		}
 
 		int data = cfg.getInt(path);
@@ -203,8 +201,8 @@ public class SCSettings {
 
 	public static void setSuffix(User user, String suffix) {
 		CommandSender server = Bukkit.getServer().getConsoleSender();
-		Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta clear suffixes");
-		Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta setsuffix 150 \"" + suffix + "\"");
+		Bukkit.getServer().dispatchCommand(server, "lp user " +  user.getUsername()  + " meta clear suffixes");
+		Bukkit.getServer().dispatchCommand(server, "lp user " +  user.getUsername()  + " meta setsuffix 150 \"" + suffix + "\"");
 	}
 
 	public static void setSuffix(Player player, String suffix) {
@@ -224,8 +222,8 @@ public class SCSettings {
 
 	public static void setPrefix(User user, String suffix) {
 		CommandSender server = Bukkit.getServer().getConsoleSender();
-		Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta clear prefixes");
-		Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta setprefix 150 \"" + suffix + "\"");
+		Bukkit.getServer().dispatchCommand(server, "lp user " +  user.getUsername()  + " meta clear prefixes");
+		Bukkit.getServer().dispatchCommand(server, "lp user " +  user.getUsername()  + " meta setprefix 150 \"" + suffix + "\"");
 	}
 
 	public static void setPrefix(Player player, String prefix) {

@@ -21,6 +21,6 @@ ConfigBadges {
 			newBadge.chatColor = (String)badge.get("color");
 			badges.put(newBadge.name, newBadge);
 		}
-		SCLog.info("Loaded "+badges.size()+" Badges.");
+		SCLog.info("Loaded " + badges.size() + " Badges.");
 	}
 }

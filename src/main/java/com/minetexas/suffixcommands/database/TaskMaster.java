@@ -69,7 +69,7 @@ public class TaskMaster {
 	}
 	
 	private static void addTask(String name, BukkitTask task) {
-		//RJ.out("Added task:"+name);
+		//RJ.out("Added task:" + name);
 		tasks.put(name, task);
 	}
 	
@@ -109,7 +109,7 @@ public class TaskMaster {
 		if (timer != null) {
 			timer.cancel();
 		}
-		//RJ.out("cancel timer:"+name);
+		//RJ.out("cancel timer:" + name);
 
 		timers.remove(name);
 	}

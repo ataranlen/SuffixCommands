@@ -23,20 +23,20 @@ public class Gang extends SQLObject {
 
 	public static void init() throws SQLException {
 		if (!SQL.hasTable(TABLE_NAME)) {
-			String table_create = "CREATE TABLE " + SQL.tb_prefix + TABLE_NAME+" (" +
+			String table_create = "CREATE TABLE " + SQL.tb_prefix + TABLE_NAME + " (" +
 					"`id` int(11) unsigned NOT NULL auto_increment," +
 					"`name` VARCHAR(64) NOT NULL," +
 					"`gangText` VARCHAR(64) NOT NULL," +
 					"`ownerUUID` mediumtext," +
-					"`leaderUUIDs` mediumtext DEFAULT NULL, "+
-					"`memberUUIDs` mediumtext DEFAULT NULL, "+
+					"`leaderUUIDs` mediumtext DEFAULT NULL, " + 
+					"`memberUUIDs` mediumtext DEFAULT NULL, " + 
 					"UNIQUE KEY (`name`), " +
 				"PRIMARY KEY (`id`)" + ")";
 
 			SQL.makeTable(table_create);
-			SCLog.info("Created "+TABLE_NAME+" table");
+			SCLog.info("Created " + TABLE_NAME + " table");
 		} else {
-			SCLog.info(TABLE_NAME+" table OK!");
+			SCLog.info(TABLE_NAME + " table OK!");
 		}
 	}
 
@@ -89,7 +89,7 @@ public class Gang extends SQLObject {
 		try {
 			this.saveNow();
 		} catch (SQLException e) {
-			SCLog.exception("Failed to rename gang: '"+oldName+"' -> '"+name+"'" , e);
+			SCLog.exception("Failed to rename gang: '" + oldName + "' -> '" + name + "'" , e);
 			e.printStackTrace();
 		}
 	}
@@ -208,7 +208,7 @@ public class Gang extends SQLObject {
 		String out = "";
 		
 		for (String uuid : uuidList) {
-			out += uuid+",";
+			out += uuid + ",";
 		}
 		
 		return out;

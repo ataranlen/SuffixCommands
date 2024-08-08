@@ -7,12 +7,13 @@ import com.minetexas.suffixcommands.exception.SCException;
 import com.minetexas.suffixcommands.util.SCColor;
 import com.minetexas.suffixcommands.util.SCLog;
 import com.minetexas.suffixcommands.util.SCSettings;
+import net.luckperms.api.cacheddata.CachedPermissionData;
+import net.luckperms.api.model.user.User;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import ru.tehkode.permissions.PermissionUser;
-import ru.tehkode.permissions.bukkit.PermissionsEx;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -56,9 +57,11 @@ public class GangCommand extends CommandBase {
 			String playerUUID = player.getUniqueId().toString();
 			if (gang.canUseGang(playerUUID)) {
 				sendMessage(sender, SCColor.Green+"Gang Set to: "+ChatColor.translateAlternateColorCodes('&', gang.getGangText()));
-				String command = "pex user "+player.getName()+" prefix \""+gang.getGangText()+ChatColor.RESET+" "+existingPlayerPrefix(player)+"\"";
-				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
-			}else {
+
+				User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+				SCSettings.setSuffix(user, gang.getGangText());
+
+			} else {
 				sendMessage(sender, SCColor.Red+"You don't have 'use' access to the "+gang.getName()+" Gang.");
 			}
 		}
@@ -137,130 +140,131 @@ public class GangCommand extends CommandBase {
 		OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
 		String playerUUID = player.getUniqueId().toString();
 		if (existingGangMember(playerUUID)) {
-			throw new SCException(playerName+" is already a member of a Gang.");
+			throw new SCException(playerName + " is already a member of a Gang.");
 		}
 		
 		if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			if (gang.canGiveGang(playerUUID)) {
-				throw new SCException(playerName+" already has 'give' access to the '"+gang.getName()+"' Gang.");
+				throw new SCException(playerName + " already has 'give' access to the '"+gang.getName()+"' Gang.");
 			}
 
 			gang.addLeaderUUID(playerUUID);
-			sendMessage(sender, SCColor.LightGreen+playerName+" was given 'give' access to the '"+gang.getName()+"' Gang.");
+			sendMessage(sender, SCColor.LightGreen + playerName + " was given 'give' access to the '" + gang.getName() + "' Gang.");
 			return;
 		}
 		
 		Player sender = getPlayer();
 		String senderUUID = sender.getUniqueId().toString();
 		if (senderUUID.equals(playerUUID)) {
-			throw new SCException("You cannot add yourself to the '"+gang.getName()+"' Gang.");
+			throw new SCException("You cannot add yourself to the '" + gang.getName() + "' Gang.");
 		}
 
 		if (gang.canGiveGang(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			if (gang.canGiveGang(playerUUID)) {
-				throw new SCException(playerName+" already has 'give' access to the '"+gang.getName()+"' Gang.");
+				throw new SCException(playerName+" already has 'give' access to the '" + gang.getName() + "' Gang.");
 			}
 
 			gang.addLeaderUUID(playerUUID);
-			sendMessage(sender, SCColor.LightGreen+playerName+" was given 'give' access to the '"+gang.getName()+"' Gang.");
+			sendMessage(sender, SCColor.LightGreen + playerName + " was given 'give' access to the '" + gang.getName() + "' Gang.");
 		} else {
-			sendMessage(sender, SCColor.Red+"You don't have 'share' access to the '"+gang.getName()+"' Gang.");
+			sendMessage(sender, SCColor.Red + "You don't have 'share' access to the '" + gang.getName() + "' Gang.");
 		}
 		
 	}
-	
-	public void take_cmd() throws SCException {		
+
+	public void take_cmd() throws SCException {
 		if (args.length < 2) {
-			throw new SCException("Enter a Gang Name");
+			throw new SCException("Enter a Badge Name");
 		}
 		if (args.length < 3) {
 			throw new SCException("Enter a Player Name");
 		}
 		if (args.length > 3) {
-			throw new SCException("Invalid Gang Name. Use /gang take [name] [player]");
+			throw new SCException("Invalid Badge Name. Use /gang take [name] [player]");
 		}
-		
+
 		Gang gang = SCSettings.gangs.get(args[1]);
 		if (gang == null) {
-			throw new SCException("Invalid Gang Name. Use exact spelling and capitalization");
+			throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
 		}
 		String playerName = args[2];
-		
-		@SuppressWarnings("deprecation")
-		OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
-		String playerUUID = player.getUniqueId().toString();
-		
-		Player sender = getPlayer();
-		String senderUUID = sender.getUniqueId().toString();
-		if (senderUUID.equals(playerUUID)) {
-			throw new SCException("You cannot remove yourself from the '"+gang.getName()+"' Gang.");
-		}
-		
-		if (gang.canShareGang(senderUUID) && gang.canGiveGang(playerUUID)) {
-			sendMessage(sender, SCColor.Green+"Removed "+player.getName()+"'s 'give' access to the '"+gang.getName()+"' Gang");
 
-			gang.removeLeaderUUID(playerUUID);
-		
-		} else if (gang.canGiveGang(senderUUID)) {
-			if (gang.canShareGang(playerUUID)) {
-				throw new SCException("You cannot remove the owner from the '"+gang.getName()+"' Gang.");
-			} else if (gang.canGiveGang(playerUUID)) {
-				throw new SCException("You cannot remove another Leader from the '"+gang.getName()+"' Gang.");
+		try {
+
+			@SuppressWarnings("deprecation")
+			OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
+			Player sender = getPlayer();
+
+			String senderUUID = sender.getUniqueId().toString();
+			String playerUUID = player.getUniqueId().toString();
+
+			if (senderUUID.equals(playerUUID)) {
+				throw new SCException("You cannot remove yourself from the '" + gang.getName() + "' Badge Group.");
 			}
-			sendMessage(sender, SCColor.Green+"Removed "+player.getName()+"'s 'use' access to the '"+gang.getName()+"' Gang");
+			if (gang.canShareGang(senderUUID) && gang.canShareGang(playerUUID)) {
+				sendMessage(sender, SCColor.Green+"Removed "+player+"'s 'give' access to the '" + gang.getName() + "' Badge Group");
 
-			gang.removeMemberUUID(playerUUID);
-		} else {
-			sendMessage(sender, SCColor.Red+"You don't have 'share' access to the '"+gang.getName()+"' Gang.");
-		}
-	    PermissionUser user = PermissionsEx.getUser(playerName);
+				gang.removeLeaderUUID(playerUUID);
+				User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+				String prefix = SCSettings.getPrefix(user);
+				if (prefix.equals(gang.getGangText())) {
+					CommandSender server = Bukkit.getConsoleSender();
+					Bukkit.getServer().dispatchCommand(server, "lp user " + user.getUsername() + " meta clear prefixes");
+				}
 
-		if (user != null) {
-			String suffix = user.getSuffix();
-			if (suffix.contains(gang.getGangText())) {
-				String clearSuffix = "pex user "+playerName+" prefix \""+ existingPlayerPrefix(user) + "\"";
-				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
+			} else if (gang.canGiveGang(senderUUID)) {
+				if (gang.canShareGang(playerUUID)) {
+					throw new SCException("You cannot remove the owner from the '" + gang.getName() + "' Gang.");
+				} else if (gang.canGiveGang(playerUUID)) {
+					throw new SCException("You cannot remove another Leader from the '" + gang.getName() + "' Gang.");
+				}
+				sendMessage(sender, SCColor.Green+"Removed " + player + "'s 'use' access to the '" + gang.getName() + "' Gang.");
+
+				gang.removeMemberUUID(playerUUID);
+			} else {
+				sendMessage(sender, SCColor.Red+"You don't have 'share' access to the '" + gang.getName() + "' Gang.");
 			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
-	
-	public void leave_cmd() throws SCException {		
+
+	public void leave_cmd() throws SCException {
 		if (args.length < 2) {
 			throw new SCException("Enter a Gang Name");
 		}
 		if (args.length > 2) {
 			throw new SCException("Invalid Gang Name. Use /gang leave [name]");
 		}
-		
-		Gang gang = SCSettings.gangs.get(args[1]);
-		if (gang == null) {
+
+		Gang badge = SCSettings.gangs.get(args[1]);
+		if (badge == null) {
 			throw new SCException("Invalid Gang Name. Use exact spelling and capitalization");
 		}
-		
+
 		Player sender = getPlayer();
 		String senderUUID = sender.getUniqueId().toString();
-		
-		if (gang.canShareGang(senderUUID)) {
-			throw new SCException("You are the leader of the '"+gang.getName()+"' Gang. You cannot leave.");
-		} else if (gang.canUseGang(senderUUID)) {
-			if (gang.canGiveGang(senderUUID)) {
-				gang.removeLeaderUUID(senderUUID);
-			}
-			gang.removeMemberUUID(senderUUID);
-			
-			PermissionUser user = PermissionsEx.getUser(sender);
 
-			if (user != null) {
-				String suffix = user.getSuffix();
-				if (suffix.equals(" "+gang.getGangText())) {
-					String clearSuffix = "pex user "+sender.getName()+" prefix \""+ existingPlayerPrefix(user) + "\"";
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
-				}
+		if (badge.canShareGang(senderUUID)) {
+			throw new SCException("You are the leader of the '" + badge.getName() + "' Gang. You cannot leave.");
+		} else if (badge.canUseGang(senderUUID)) {
+			if (badge.canGiveGang(senderUUID)) {
+				badge.removeLeaderUUID(senderUUID);
+			}
+			badge.removeMemberUUID(senderUUID);
+
+			User user = SCSettings.luckPermsAPI.getUserManager().getUser(senderUUID);
+			String suffix = SCSettings.getSuffix(user);
+
+			if (suffix.equals(badge.getGangText())) {
+				CommandSender server = Bukkit.getServer().getConsoleSender();
+				Bukkit.dispatchCommand(server, "lp user " + user.getUsername() + " meta clear prefixes");
 			}
 
-			sendMessage(sender, SCColor.Red+"You have given up access to the '"+gang.getName()+"' Gang.");
+			sendMessage(sender, SCColor.Red + "You have given up access to the '" + badge.getName() + "' Gang Group.");
 		} else {
-			sendMessage(sender, SCColor.Red+"You already don't have access to the '"+gang.getName()+"' Gang.");
+			sendMessage(sender, SCColor.Red + "You already don't have access to the '" + badge.getName() + "' Gang Group.");
 		}
 	}
 	
@@ -322,16 +326,20 @@ public class GangCommand extends CommandBase {
 			String playerName = args[1];
 			@SuppressWarnings("deprecation")
 			OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
-		    PermissionUser user = PermissionsEx.getUser(playerName);
+		    User user = SCSettings.luckPermsAPI.getUserManager().getUser(playerName);
 			sendMessage(sender, SCColor.LightGreen+playerName+"'s Gang removed");
-			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "pex user "+player.getName()+" prefix \""+ existingPlayerPrefix(user) + "\"");
+			CommandSender server = Bukkit.getServer().getConsoleSender();
+			Bukkit.getServer().dispatchCommand(server, "lp user " + player.getName() + " meta setprefix 100 \"" + existingPlayerPrefix(user) + "\"");
 			return;
 		}
 		Player player;
 		try {
 			player = getPlayer();
 			sendMessage(sender, SCColor.LightGreen+"Gang removed");
-			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), "pex user "+player.getName()+" prefix \""+ existingPlayerPrefix(player) + "\"");
+
+			CommandSender server = Bukkit.getServer().getConsoleSender();
+			Bukkit.getServer().dispatchCommand(server, "lp user "+ player.getName() +" meta clear prefixes");
+
 		} catch (SCException e) {
 			e.printStackTrace();
 		}
@@ -548,59 +556,60 @@ public class GangCommand extends CommandBase {
 		}
 	}
 
-	public String existingPlayerPrefix(PermissionUser player) {
+	public String existingPlayerPrefix(User player) {
 		String prefix = "";
-		if (player.has("permission.group.owner")) {
+		CachedPermissionData userPerms = player.getCachedData().getPermissionData();
+		if (userPerms.checkPermission("permission.group.owner").asBoolean()) {
 			SCLog.info("Admin, no prefix");
 			return "&4";
-		} else if (player.has("permission.group.plusgold")) {
+		} else if (userPerms.checkPermission("permission.group.plusgold").asBoolean()) {
 			prefix += "&6&l+";
-		} else if (player.has("permission.group.plus")) {
+		} else if (userPerms.checkPermission("permission.group.plus").asBoolean()) {
 			prefix += "&3+";
 		}
 
-		if (player.has("prefix.color.&1")) {
+		if (userPerms.checkPermission("prefix.color.&1").asBoolean()) {
 			prefix += "&1";
-		} else if (player.has("prefix.color.&2")) {
+		} else if (userPerms.checkPermission("prefix.color.&2").asBoolean()) {
 			prefix += "&2";
-		} else if (player.has("prefix.color.&3")) {
+		} else if (userPerms.checkPermission("prefix.color.&3").asBoolean()) {
 			prefix += "&3";
-		} else if (player.has("prefix.color.&4")) {
+		} else if (userPerms.checkPermission("prefix.color.&4").asBoolean()) {
 			prefix += "&4";
-		} else if (player.has("prefix.color.&5")) {
+		} else if (userPerms.checkPermission("prefix.color.&5").asBoolean()) {
 			prefix += "&5";
-		} else if (player.has("prefix.color.&6")) {
+		} else if (userPerms.checkPermission("prefix.color.&6").asBoolean()) {
 			prefix += "&6";
-		} else if (player.has("prefix.color.&7")) {
+		} else if (userPerms.checkPermission("prefix.color.&7").asBoolean()) {
 			prefix += "&7";
-		} else if (player.has("prefix.color.&8")) {
+		} else if (userPerms.checkPermission("prefix.color.&8").asBoolean()) {
 			prefix += "&8";
-		} else if (player.has("prefix.color.&9")) {
+		} else if (userPerms.checkPermission("prefix.color.&9").asBoolean()) {
 			prefix += "&9";
-		} else if (player.has("prefix.color.&a")) {
+		} else if (userPerms.checkPermission("prefix.color.&a").asBoolean()) {
 			prefix += "&a";
-		} else if (player.has("prefix.color.&b")) {
+		} else if (userPerms.checkPermission("prefix.color.&b").asBoolean()) {
 			prefix += "&b";
-		} else if (player.has("prefix.color.&c")) {
+		} else if (userPerms.checkPermission("prefix.color.&c").asBoolean()) {
 			prefix += "&c";
-		} else if (player.has("prefix.color.&d")) {
+		} else if (userPerms.checkPermission("prefix.color.&d").asBoolean()) {
 			prefix += "&d";
-		} else if (player.has("prefix.color.&e")) {
+		} else if (userPerms.checkPermission("prefix.color.&e").asBoolean()) {
 			prefix += "&e";
 		} else {
 			prefix += "&f";
 		}
 
-		if (player.has("prefix.style.&l")) {
+		if (userPerms.checkPermission("prefix.style.&l").asBoolean()) {
 			prefix += "&l";
 		}
-		if (player.has("prefix.style.&o")) {
+		if (userPerms.checkPermission("prefix.style.&o").asBoolean()) {
 			prefix += "&o";
 		}
-		if (player.has("prefix.style.&m")) {
+		if (userPerms.checkPermission("prefix.style.&m").asBoolean()) {
 			prefix += "&m";
 		}
-		if (player.has("prefix.style.&n")) {
+		if (userPerms.checkPermission("prefix.style.&n").asBoolean()) {
 			prefix += "&n";
 		}
 
@@ -652,7 +661,7 @@ public class GangCommand extends CommandBase {
 
 		if (player.hasPermission("prefix.style.&l")) {
 			prefix += "&l";
-		} 
+		}
 		if (player.hasPermission("prefix.style.&o")) {
 			prefix += "&o";
 		}
@@ -674,7 +683,7 @@ public class GangCommand extends CommandBase {
 		}
 		return false;
 	}
-	
+
 	public Boolean permissionCheck(String permission) {
 		if (sender instanceof Player) {
 			Player player;

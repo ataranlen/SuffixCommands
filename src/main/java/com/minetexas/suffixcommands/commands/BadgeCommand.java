@@ -6,14 +6,14 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 
+import net.luckperms.api.model.user.User;
+import net.luckperms.api.model.user.UserManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.entity.Player;
-
-import ru.tehkode.permissions.PermissionUser;
-import ru.tehkode.permissions.bukkit.PermissionsEx;
 
 import com.minetexas.suffixcommands.Badge;
 import com.minetexas.suffixcommands.exception.InvalidConfiguration;
@@ -68,12 +68,14 @@ public class BadgeCommand extends CommandBase {
 					|| permissionCheck(SCSettings.GROUPSHARE_BASE + legacyBadge.name)
 					|| permissionCheck(SCSettings.GROUP_BASE + legacyBadge.name)) {
 				Player player;
+
+
 				try {
 					player = getPlayer();
 					sendMessage(sender, SCColor.Green + "Badge Set to:"
 							+ ChatColor.translateAlternateColorCodes('&', legacyBadge.badgeText));
-					String command = "pex user " + player.getName() + " suffix \"" + legacyBadge.badgeText + "\"";
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+					User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+					SCSettings.setSuffix(user, legacyBadge.badgeText);
 				} catch (SCException e) {
 					e.printStackTrace();
 				}
@@ -87,8 +89,9 @@ public class BadgeCommand extends CommandBase {
 			if (badge.canUseBadge(playerUUID)) {
 				sendMessage(sender, SCColor.Green + "Badge Set to:"
 						+ ChatColor.translateAlternateColorCodes('&', badge.getBadgeText()));
-				String command = "pex user " + player.getName() + " suffix \"" + badge.getBadgeText() + "\"";
-				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command);
+
+				User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+				SCSettings.setSuffix(user, badge.getBadgeText());
 			} else {
 				sendMessage(sender, SCColor.Red + "You don't have 'use' access to the " + badge.getName() + " Badge.");
 			}
@@ -221,46 +224,44 @@ public class BadgeCommand extends CommandBase {
 		}
 		String playerName = args[2];
 
-		@SuppressWarnings("deprecation")
-		OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
-		String playerUUID = player.getUniqueId().toString();
+		try {
 
-		Player sender = getPlayer();
-		String senderUUID = sender.getUniqueId().toString();
-		if (senderUUID.equals(playerUUID)) {
-			throw new SCException("You cannot remove yourself from the '" + badge.getName() + "' Badge Group.");
-		}
+			@SuppressWarnings("deprecation")
+			OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(playerName);
+			Player sender = getPlayer();
 
-		if (badge.canShareBadge(senderUUID) && badge.canGiveBadge(playerUUID)) {
-			sendMessage(sender, SCColor.Green + "Removed " + player.getName() + "'s 'give' access to the '"
-					+ badge.getName() + "' Badge Group");
+			String senderUUID = sender.getUniqueId().toString();
+			String playerUUID = player.getUniqueId().toString();
 
-			badge.removeLeaderUUID(playerUUID);
-
-		} else if (badge.canGiveBadge(senderUUID)) {
-			if (badge.canShareBadge(playerUUID)) {
-				throw new SCException("You cannot remove the owner from the '" + badge.getName() + "' Badge Group.");
-			} else if (badge.canGiveBadge(playerUUID)) {
-				throw new SCException(
-						"You cannot remove another Leader from the '" + badge.getName() + "' Badge Group.");
+			if (senderUUID.equals(playerUUID)) {
+				throw new SCException("You cannot remove yourself from the '"+badge.getName()+"' Badge Group.");
 			}
-			sendMessage(sender, SCColor.Green + "Removed " + player.getName() + "'s 'use' access to the '"
-					+ badge.getName() + "' Badge Group");
+			if (badge.canShareBadge(senderUUID) && badge.canShareBadge(playerUUID)) {
+				sendMessage(sender, SCColor.Green+"Removed "+player+"'s 'give' access to the '"+badge.getName()+"' Badge Group");
 
-			badge.removeMemberUUID(playerUUID);
-		} else {
-			sendMessage(sender,
-					SCColor.Red + "You don't have 'share' access to the '" + badge.getName() + "' Badge Group.");
-		}
+				badge.removeLeaderUUID(playerUUID);
+				User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+				String suffix = SCSettings.getSuffix(user);
+				if (suffix.equals(badge.getBadgeText())) {
+					CommandSender server = Bukkit.getConsoleSender();
+					Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta clear suffixes");
+				}
 
-		PermissionUser user = PermissionsEx.getUser(playerName);
+			} else if (badge.canGiveBadge(senderUUID)) {
+				if (badge.canShareBadge(playerUUID)) {
+					throw new SCException("You cannot remove the owner from the '"+badge.getName()+"' Badge Group.");
+				} else if (badge.canGiveBadge(playerUUID)) {
+					throw new SCException("You cannot remove another Leader from the '"+badge.getName()+"' Badge Group.");
+				}
+				sendMessage(sender, SCColor.Green+"Removed "+player+"'s 'use' access to the '"+badge.getName()+"' Badge Group");
 
-		if (user != null) {
-			String suffix = user.getSuffix();
-			if (suffix.equals(" " + badge.getBadgeText())) {
-				String clearSuffix = "pex user " + playerName + " suffix \"\"";
-				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
+				badge.removeMemberUUID(playerUUID);
+			} else {
+				sendMessage(sender, SCColor.Red+"You don't have 'share' access to the '"+badge.getName()+"' Badge Group.");
 			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
@@ -281,27 +282,24 @@ public class BadgeCommand extends CommandBase {
 		String senderUUID = sender.getUniqueId().toString();
 
 		if (badge.canShareBadge(senderUUID)) {
-			throw new SCException("You are the leader of the '" + badge.getName() + "' Badge Group. You cannot leave.");
+			throw new SCException("You are the leader of the '"+badge.getName()+"' Badge Group. You cannot leave.");
 		} else if (badge.canUseBadge(senderUUID)) {
 			if (badge.canGiveBadge(senderUUID)) {
 				badge.removeLeaderUUID(senderUUID);
 			}
 			badge.removeMemberUUID(senderUUID);
 
-			PermissionUser user = PermissionsEx.getUser(sender);
+			User user = SCSettings.luckPermsAPI.getUserManager().getUser(senderUUID);
+			String suffix = SCSettings.getSuffix(user);
 
-			if (user != null) {
-				String suffix = user.getSuffix();
-				if (suffix.equals(" " + badge.getBadgeText())) {
-					String clearSuffix = "pex user " + sender.getName() + " suffix \"\"";
-					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
-				}
+			if (suffix.equals(badge.getBadgeText())) {
+				CommandSender server = Bukkit.getServer().getConsoleSender();
+				Bukkit.dispatchCommand(server, "lp user "+ user.getUsername() +" meta clear suffixes");
 			}
 
-			sendMessage(sender, SCColor.Red + "You have given up access to the '" + badge.getName() + "' Badge Group.");
+			sendMessage(sender, SCColor.Red+"You have given up access to the '"+badge.getName()+"' Badge Group.");
 		} else {
-			sendMessage(sender,
-					SCColor.Red + "You already don't have access to the '" + badge.getName() + "' Badge Group.");
+			sendMessage(sender, SCColor.Red+"You already don't have access to the '"+badge.getName()+"' Badge Group.");
 		}
 	}
 
@@ -386,7 +384,7 @@ public class BadgeCommand extends CommandBase {
 			player = getPlayer();
 			sendMessage(sender, SCColor.LightGreen + "Badge removed");
 			Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(),
-					"pex user " + player.getName() + " suffix \"\"");
+					"lp user "+ player.getName() +" meta clear suffixes");
 		} catch (SCException e) {
 			e.printStackTrace();
 		}
@@ -512,9 +510,9 @@ public class BadgeCommand extends CommandBase {
 		String newName = args[2];
 		String badgeText = args[3];
 
-		newName = newName.replaceAll("§", "");
+		newName = newName.replaceAll("ï¿½", "");
 		newName = newName.replaceAll("&", "");
-		badgeText = badgeText.replaceAll("§", "&");
+		badgeText = badgeText.replaceAll("ï¿½", "&");
 		badgeText = badgeText.replaceAll("&k", "");
 		if (newName.length() >= 16 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
 
@@ -621,9 +619,9 @@ public class BadgeCommand extends CommandBase {
 			String newName = args[4];
 			String badgeText = args[5];
 
-			newName = newName.replaceAll("§", "");
+			newName = newName.replaceAll("ï¿½", "");
 			newName = newName.replaceAll("&", "");
-			badgeText = badgeText.replaceAll("§", "&");
+			badgeText = badgeText.replaceAll("ï¿½", "&");
 			badgeText = badgeText.replaceAll("&k", "");
 			if (newName.length() >= 16 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
 

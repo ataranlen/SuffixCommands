@@ -5,7 +5,8 @@ import java.util.Map;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
-public class ConfigBadges {
+public class
+ConfigBadges {
 	public String name;	
 	public String badgeText;
 	public String chatColor;

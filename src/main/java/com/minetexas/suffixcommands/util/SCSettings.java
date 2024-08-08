@@ -15,7 +15,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.minetexas.suffixcommands.Gang;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
+import net.luckperms.api.cacheddata.CachedMetaData;
+import net.luckperms.api.context.ContextManager;
+import net.luckperms.api.context.ImmutableContextSet;
+import net.luckperms.api.model.user.User;
+import net.luckperms.api.query.QueryOptions;
 import org.apache.commons.io.FileUtils;
+import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -24,6 +33,7 @@ import com.minetexas.suffixcommands.Badge;
 import com.minetexas.suffixcommands.SuffixCommands;
 import com.minetexas.suffixcommands.database.SQL;
 import com.minetexas.suffixcommands.exception.InvalidConfiguration;
+import org.bukkit.entity.Player;
 
 public class SCSettings {
 
@@ -45,6 +55,8 @@ public class SCSettings {
 
 	public static Map<String, Badge> badges = new HashMap<String, Badge>();
 	public static Map<String, Gang> gangs = new HashMap<String, Gang>();
+
+	public static LuckPerms luckPermsAPI = LuckPermsProvider.get();
 	
 	public static void init(SuffixCommands plugin) throws FileNotFoundException, IOException, InvalidConfigurationException, InvalidConfiguration {
 		SCSettings.plugin = plugin;
@@ -164,7 +176,7 @@ public class SCSettings {
 		if (!cfg.contains(path)) {
 			throw new InvalidConfiguration("Could not get configuration double "+path);
 		}
-		
+
 		int data = cfg.getInt(path);
 		return data;
 	}
@@ -177,5 +189,47 @@ public class SCSettings {
 	
 	private static void loadConfigFiles() throws FileNotFoundException, IOException, InvalidConfigurationException {
 		badgeConfig = loadConfig("badges.yml");
+	}
+
+	public static String getSuffix(User user) {
+		ContextManager contextManager = LuckPermsProvider.get().getContextManager();
+		ImmutableContextSet contextSet = contextManager.getContext(user).orElseGet(contextManager::getStaticContext);
+
+		CachedMetaData metaData = user.getCachedData().getMetaData(QueryOptions.contextual(contextSet));
+
+		return metaData.getSuffix();
+	}
+
+
+	public static void setSuffix(User user, String suffix) {
+		CommandSender server = Bukkit.getServer().getConsoleSender();
+		Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta clear suffixes");
+		Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta setsuffix 150 \"" + suffix + "\"");
+	}
+
+	public static void setSuffix(Player player, String suffix) {
+		User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+		setSuffix(user, suffix);
+	}
+
+	public static String getPrefix(User user) {
+		ContextManager contextManager = LuckPermsProvider.get().getContextManager();
+		ImmutableContextSet contextSet = contextManager.getContext(user).orElseGet(contextManager::getStaticContext);
+
+		CachedMetaData metaData = user.getCachedData().getMetaData(QueryOptions.contextual(contextSet));
+
+		return metaData.getPrefix();
+	}
+
+
+	public static void setPrefix(User user, String suffix) {
+		CommandSender server = Bukkit.getServer().getConsoleSender();
+		Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta clear prefixes");
+		Bukkit.getServer().dispatchCommand(server, "lp user "+ user.getUsername() +" meta setprefix 150 \"" + suffix + "\"");
+	}
+
+	public static void setPrefix(Player player, String prefix) {
+		User user = SCSettings.luckPermsAPI.getUserManager().getUser(player.getUniqueId());
+		setPrefix(user, prefix);
 	}
 }

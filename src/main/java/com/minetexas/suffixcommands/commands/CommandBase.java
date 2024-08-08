@@ -4,13 +4,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.minetexas.suffixcommands.exception.SCException;
-import com.minetexas.suffixcommands.util.SCColor;
 
 public abstract class CommandBase implements CommandExecutor {
 
@@ -64,7 +64,7 @@ public abstract class CommandBase implements CommandExecutor {
 		for (String c : commands.keySet()) {
 			  if (c.equalsIgnoreCase(args[0])) {
 					try { 
-						Method method = this.getClass().getMethod(args[0].toLowerCase()+"_cmd");
+						Method method = this.getClass().getMethod(args[0].toLowerCase() + "_cmd");
 						try {
 							method.invoke(this);
 							return true;
@@ -90,7 +90,7 @@ public abstract class CommandBase implements CommandExecutor {
 							}
 							return false;
 						}
-						sendError(sender, "Unkown Command: "+args[0]);
+						sendError(sender, "Unkown Command: " + args[0]);
 					}
 					return true;
 				}
@@ -105,7 +105,7 @@ public abstract class CommandBase implements CommandExecutor {
 				return false;
 			}
 			
-			sendError(sender, "Unkown Command: "+args[0]);
+			sendError(sender, "Unkown Command: " + args[0]);
 			return false;
 	}
 	
@@ -118,7 +118,6 @@ public abstract class CommandBase implements CommandExecutor {
 	
 	public static void sendMessage(Object sender, String line) {
 		if ((sender instanceof Player)) {
-//			SCLog.debug(((Player) sender).getDisplayName()+" - "+line);
 			((Player) sender).sendMessage(line);
 		} else if (sender instanceof CommandSender) {
 			((CommandSender) sender).sendMessage(line);
@@ -140,16 +139,16 @@ public abstract class CommandBase implements CommandExecutor {
 	
 	public static String buildTitle(String title) {
 		String line =   "-------------------------------------------------";
-		String titleBracket = "[ " + SCColor.Yellow + title + SCColor.LightBlue + " ]";
+		String titleBracket = "[ " + ChatColor.YELLOW + title + ChatColor.AQUA + " ]";
 		
 		if (titleBracket.length() > line.length()) {
-			return SCColor.LightBlue+"-"+titleBracket+"-";
+			return ChatColor.AQUA + "-" + titleBracket + "-";
 		}
 		
 		int min = (line.length() / 2) - titleBracket.length() / 2;
 		int max = (line.length() / 2) + titleBracket.length() / 2;
 		
-		String out = SCColor.LightBlue + line.substring(0, Math.max(0, min));
+		String out = ChatColor.AQUA + line.substring(0, Math.max(0, min));
 		out += titleBracket + line.substring(max);
 		
 		return out;
@@ -160,7 +159,7 @@ public abstract class CommandBase implements CommandExecutor {
 	}
 	
 	public static void sendError(Object sender, String line) {		
-		sendMessage(sender, SCColor.Rose+line);
+		sendMessage(sender, ChatColor.RED + line);
 	}
 
 

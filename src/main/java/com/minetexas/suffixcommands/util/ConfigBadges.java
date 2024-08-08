@@ -5,7 +5,8 @@ import java.util.Map;
 
 import org.bukkit.configuration.file.FileConfiguration;
 
-public class ConfigBadges {
+public class
+ConfigBadges {
 	public String name;	
 	public String badgeText;
 	public String chatColor;
@@ -20,6 +21,6 @@ public class ConfigBadges {
 			newBadge.chatColor = (String)badge.get("color");
 			badges.put(newBadge.name, newBadge);
 		}
-		SCLog.info("Loaded "+badges.size()+" Badges.");
+		SCLog.info("Loaded " + badges.size() + " Badges.");
 	}
 }

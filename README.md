@@ -1,16 +1,17 @@
-A fairly simple plugin, but it requires that you use permissionsEX and MySQL.
+# SuffixCommands
+A fairly simple plugin, but it requires that you use LuckPerms and MySQL.
 
 With this plugin, you can give players access to change their own suffix. I couldn't find a plugin that would do exactly what I wanted, so I started writing one to fit my own needs. If you have any suggestions, feel free to join the discussion.
 
 If you want to see it in action, join anarchy.minetexas.com
 
-##Requirements:
+## Requirements:
 - Spigot 1.11+
-- permissionsEX
+- LuckPerms
 - Herochat (Optional)
 - A MySQL server and Database
 
-##Commands:
+## Commands:
 * /badge set [name]- Change your badge to one you own
 * /badge give [name] [player]- Grant a player access to a group badge
 * /badge share [name] [player]- Grant a player access to give a group badge
@@ -28,7 +29,7 @@ If you want to see it in action, join anarchy.minetexas.com
 * /bc [name] [message] - Same as /chat
 * /chat list - Show all the badge chat channels you can chat in.
 
-##Permissions:
+## Permissions:
 ```
 suffixcommands.badge.set - Allows setting of own badge
 suffixcommands.badge.[name] - gives access to set the named legacy badge
@@ -36,9 +37,9 @@ suffixcommands.chat.[name] - Allows sending and receiving 'Badge Chat' with /cha
 suffixcommands.createbadge - Allows creation and renaming of unowned badges, useful for admins
 ```
 
-##Default Config:
-```
-#MySQL Configuration:
+## Default Config:
+```yaml
+# MySQL Configuration:
 mysql:
    hostname: localhost
    port: '3306'
@@ -49,13 +50,14 @@ mysql:
    min_conns: '5'
    max_conns: '10'
    parts: '3'
-#Legacy (Non-Group, permission based) Badges
+# Legacy (Non-Group, permission based) Badges
 badges:
     - name: 'gimmie'
       badgeText: ' &b༼ つ ◕_◕ ༽つ'
       color: '&b'
 ```
 
+### Sponsoring
 If you enjoy this plugin, consider [sponsoring one of our servers](http://www.minetexas.com/minetexas-store-usd-bitcoin.html) for a week or more.
 
 - Bitcoin: 1PPwsvXLgfycHALXTAHSUjSUfzQYw16NKb

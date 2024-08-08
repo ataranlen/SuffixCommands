@@ -31,7 +31,7 @@ public class SCLog {
 	}
 	
 	public static void heading(String title) {
-		plugin.getLogger().info("========= "+title+" =========");
+		plugin.getLogger().info("========= " + title + " =========");
 	}
 	
 	public static void info(String message) {
@@ -39,7 +39,7 @@ public class SCLog {
 	}
 	
 	public static void debug(String message) {
-		plugin.getLogger().info("[DEBUG] "+message);
+		plugin.getLogger().info("[DEBUG] " + message);
 	}
 
 	public static void warning(String message) {
@@ -50,7 +50,7 @@ public class SCLog {
 				e.printStackTrace();
 			}
 		}
-		plugin.getLogger().info("[WARNING] "+message);
+		plugin.getLogger().info("[WARNING] " + message);
 	}
 
 	public static void error(String message) {
@@ -58,7 +58,7 @@ public class SCLog {
 	}
 	
 	public static void adminlog(String name, String message) {
-		plugin.getLogger().info("[ADMIN:"+name+"] "+message);
+		plugin.getLogger().info("[ADMIN: " + name + "] " + message);
 	}
 	
 	public static void cleanupLog(String message) {

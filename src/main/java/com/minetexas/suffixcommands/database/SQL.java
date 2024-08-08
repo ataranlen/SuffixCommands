@@ -49,7 +49,7 @@ public class SQL {
 		SQL.max_conns = Integer.valueOf(SCSettings.getStringBase("mysql.max_conns"));
 		SQL.parts = Integer.valueOf(SCSettings.getStringBase("mysql.parts"));
 
-		SCLog.info("\t Using "+SQL.hostname+":"+SQL.port+" user:"+SQL.username+" DB:"+SQL.db_name);
+		SCLog.info("\t Using " + SQL.hostname + ":" + SQL.port + " user:" + SQL.username + " DB:" + SQL.db_name);
 
 		SCLog.info("\t Building Connection Pool for Badge database.");
 		badgeDatabase = new ConnectionPool(SQL.dsn, SQL.username, SQL.password, SQL.min_conns, SQL.max_conns, SQL.parts);
@@ -110,11 +110,11 @@ public class SQL {
 		PreparedStatement ps = null;
 		
 		try {
-			String table_alter = "ALTER TABLE "+ SQL.tb_prefix + tablename +" ADD " +columnDef;
+			String table_alter = "ALTER TABLE " +  SQL.tb_prefix + tablename  + " ADD " +columnDef;
 			context = getGameConnection();		
 			ps = context.prepareStatement(table_alter);
 			ps.execute();
-			SCLog.info("\tADDED:"+columnDef);
+			SCLog.info("\tADDED:" + columnDef);
 		} finally {
 			SQL.close(null, ps, context);
 		}
@@ -132,7 +132,7 @@ public class SQL {
 		
 		try {
 			String sql = "UPDATE `" + SQL.tb_prefix + tablename + "` SET ";
-			String where = " WHERE `"+keyname+"` = ?;";
+			String where = " WHERE `" + keyname + "` = ?;";
 			ArrayList<Object> values = new ArrayList<Object>();
 	
 			Object keyValue = hashmap.get(keyname);
@@ -142,7 +142,7 @@ public class SQL {
 			while (keyIter.hasNext()) {
 				String key = keyIter.next();
 				
-				sql += "`"+key+"` = ?";
+				sql += "`" + key + "` = ?";
 				sql += "" + (keyIter.hasNext() ? ", " : " ");
 				values.add(hashmap.get(key));
 			}
@@ -251,7 +251,7 @@ public class SQL {
 					name = "Unknown";
 				}
 				
-				SCLog.error("SQL ERROR: Saving an SQLObject returned a 0 ID! Name:"+name+" Table:"+tablename);
+				SCLog.error("SQL ERROR: Saving an SQLObject returned a 0 ID! Name:" + name + " Table:" + tablename);
 			}
 			return id;
 
@@ -295,8 +295,8 @@ public class SQL {
 	}
 	public static void makeCol(String colname, String type, String TABLE_NAME) throws SQLException {
 		if (!SQL.hasColumn(TABLE_NAME, colname)) {
-			SCLog.info("\tCouldn't find "+colname+" column for "+TABLE_NAME);
-			SQL.addColumn(TABLE_NAME, "`"+colname+"` "+type);				
+			SCLog.info("\tCouldn't find " + colname + " column for " + TABLE_NAME);
+			SQL.addColumn(TABLE_NAME, "`" + colname + "` " + type);				
 		}
 	}
 	

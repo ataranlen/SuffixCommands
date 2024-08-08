@@ -1,8 +1,8 @@
 name: SuffixCommands
 main: com.minetexas.suffixcommands.SuffixCommands
-version: 0.10
+version: 0.11
 author: ataranlen
-description: Simple Badge Groups for User selectable pexPermission Suffixes
+description: Simple Badge Groups for User selectable LuckPerms Permission Suffixes
 
 commands:
   badge:

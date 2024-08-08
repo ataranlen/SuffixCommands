@@ -14,7 +14,6 @@ import com.dthielke.herochat.Herochat;
 import com.minetexas.suffixcommands.Badge;
 import com.minetexas.suffixcommands.exception.SCException;
 import com.minetexas.suffixcommands.util.ConfigBadges;
-import com.minetexas.suffixcommands.util.SCColor;
 import com.minetexas.suffixcommands.util.SCLog;
 import com.minetexas.suffixcommands.util.SCSettings;
 
@@ -82,13 +81,13 @@ public class ChatCommand extends CommandBase {
 			if (permissionCheck(SCSettings.PERMISSION_CHAT+legacyBadge.name)) {			
 				StringBuilder builder = new StringBuilder();
 				String mainColor = ChatColor.translateAlternateColorCodes('&', legacyBadge.chatColor);
-				builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&', legacyBadge.badgeText)+mainColor+"]"+mainColor);
+				builder.append(mainColor + "[" + sender.getName()+ChatColor.translateAlternateColorCodes('&', legacyBadge.badgeText)+mainColor + "]" + mainColor);
 				
 				args[0] = "";
 				
 				for(String s : args) {
 					if (s.length() >= 1) {
-						builder.append(" "+s);
+						builder.append(" " + s);
 					}
 				}
 				
@@ -98,7 +97,7 @@ public class ChatCommand extends CommandBase {
 				Collection <? extends Player> players = Bukkit.getOnlinePlayers();
 
 				Boolean useHerochat = false;
-				if (SCSettings.hasHerochat == true) {
+				if (SCSettings.isUsingHerochat() == true) {
 					Herochat hc = Herochat.getPlugin();
 					useHerochat = hc.isEnabled();
 				}
@@ -121,7 +120,7 @@ public class ChatCommand extends CommandBase {
 				
 				
 			} else {
-				sendMessage(sender, SCColor.Red+"You don't have access to the '"+legacyBadge.name+"' Badge Group.");
+				sendMessage(sender, ChatColor.DARK_RED + "You don't have access to the '" + legacyBadge.name + "' Badge Group.");
 			}
 		} else {
 			Player player = getPlayer();
@@ -129,13 +128,13 @@ public class ChatCommand extends CommandBase {
 			if (badge.canUseBadge(playerUUID)) {			
 				StringBuilder builder = new StringBuilder();
 				String mainColor = ChatColor.translateAlternateColorCodes('&', badge.getChatColor());
-				builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&',  badge.getBadgeText())+mainColor+"]"+mainColor);
+				builder.append(mainColor + "[" + sender.getName()+ChatColor.translateAlternateColorCodes('&',  badge.getBadgeText())+mainColor + "]" + mainColor);
 				
 				args[0] = "";
 				
 				for(String s : args) {
 					if (s.length() >= 1) {
-						builder.append(" "+s);
+						builder.append(" " + s);
 					}
 				}
 				
@@ -145,7 +144,7 @@ public class ChatCommand extends CommandBase {
 				Collection <? extends Player> players = Bukkit.getOnlinePlayers();
 
 				Boolean useHerochat = false;
-				if (SCSettings.hasHerochat == true) {
+				if (SCSettings.isUsingHerochat() == true) {
 					Herochat hc = Herochat.getPlugin();
 					useHerochat = hc.isEnabled();
 				}
@@ -167,7 +166,7 @@ public class ChatCommand extends CommandBase {
 				
 				
 			} else {
-				sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.getName()+"' Badge Group.");
+				sendMessage(sender, ChatColor.DARK_RED + "You don't have access to the '" + badge.getName() + "' Badge Group.");
 			}
 		}
 	}
@@ -187,7 +186,7 @@ public class ChatCommand extends CommandBase {
 				} else {
 					status = "Owner";
 				}
-				sendMessage(sender, badge.getName()+SCColor.Green+" ["+status+"]:"+ChatColor.translateAlternateColorCodes('&', badge.getBadgeText()));
+				sendMessage(sender, badge.getName()+ChatColor.DARK_GREEN + " [" + status + "]:" + ChatColor.translateAlternateColorCodes('&', badge.getBadgeText()));
 				hasBadges = true;
 			}
 		}
@@ -233,12 +232,12 @@ public class ChatCommand extends CommandBase {
 		for (String c : commands.keySet()) {
 			String info = commands.get(c);
 			
-			info = info.replace("[", SCColor.Yellow+"[");
-			info = info.replace("]", "]"+SCColor.LightGray);
-			info = info.replace("(", SCColor.Yellow+"(");
-			info = info.replace(")", ")"+SCColor.LightGray);
+			info = info.replace("[", ChatColor.YELLOW + "[");
+			info = info.replace("]", "]" + ChatColor.GRAY);
+			info = info.replace("(", ChatColor.YELLOW + "(");
+			info = info.replace(")", ")" + ChatColor.GRAY);
 						
-			sendMessage(sender, SCColor.LightPurple+command+" "+c+SCColor.LightGray+" "+info);
+			sendMessage(sender, ChatColor.LIGHT_PURPLE+command + " " + c+ChatColor.GRAY + " " + info);
 		}
 	}
 	

@@ -3,6 +3,8 @@ package com.minetexas.suffixcommands;
 import java.io.IOException;
 
 import com.minetexas.suffixcommands.commands.GangCommand;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -17,7 +19,10 @@ import com.minetexas.suffixcommands.util.SCSettings;
 
 public class SuffixCommands extends JavaPlugin {
 
-	public static boolean isDisable = false;
+	@Getter private static SuffixCommands instance;
+	@Getter @Setter private boolean disabled = false;
+
+
 	public void onEnable() {
 		
 
@@ -44,7 +49,7 @@ public class SuffixCommands extends JavaPlugin {
 	public void onDisable() {
 		super.onDisable();
 		SCLog.info("onDisable has been invoked!");
-		isDisable = true;
+		setDisabled(true);
 		SQLUpdate.save();
 		SQL.badgeDatabase.shutdown();
 	}

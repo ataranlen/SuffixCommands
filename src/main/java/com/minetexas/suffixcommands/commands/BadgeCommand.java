@@ -2,7 +2,9 @@ package com.minetexas.suffixcommands.commands;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 
@@ -257,7 +259,7 @@ public class BadgeCommand extends CommandBase {
 
 		if (user != null) {
 			String suffix = user.getSuffix();
-			if (suffix.equals(" " + badge.getBadgeText())) {
+			if (suffix.equals(badge.getBadgeText())) {
 				String clearSuffix = "pex user " + playerName + " suffix \"\"";
 				Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
 			}
@@ -292,7 +294,7 @@ public class BadgeCommand extends CommandBase {
 
 			if (user != null) {
 				String suffix = user.getSuffix();
-				if (suffix.equals(" " + badge.getBadgeText())) {
+				if (suffix.equals(badge.getBadgeText())) {
 					String clearSuffix = "pex user " + sender.getName() + " suffix \"\"";
 					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
 				}
@@ -512,9 +514,9 @@ public class BadgeCommand extends CommandBase {
 		String newName = args[2];
 		String badgeText = args[3];
 
-		newName = newName.replaceAll("§", "");
+		newName = newName.replaceAll("ï¿½", "");
 		newName = newName.replaceAll("&", "");
-		badgeText = badgeText.replaceAll("§", "&");
+		badgeText = badgeText.replaceAll("ï¿½", "&");
 		badgeText = badgeText.replaceAll("&k", "");
 		if (newName.length() >= 16 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
 
@@ -534,6 +536,10 @@ public class BadgeCommand extends CommandBase {
 		}
 
 		if (badge.canShareBadge(playerUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
+			if (!permissionCheck(SCSettings.PERMISSION_CREATE) && !badge.canRenameNow(SCSettings.getIntegerBase("rename_timeout_days", 7))) {
+				throw new SCException("This badge can only be renamed once every " + SCSettings.getIntegerBase("rename_timeout_days", 7)
+						+ " day(s). You can rename it again on " + getNextRenameTime(badge, SCSettings.getIntegerBase("rename_timeout_days", 7)) + ".");
+			}
 
 			Badge newBadge = SCSettings.badges.get(newName);
 			Badge badgeFromText = null;
@@ -621,9 +627,9 @@ public class BadgeCommand extends CommandBase {
 			String newName = args[4];
 			String badgeText = args[5];
 
-			newName = newName.replaceAll("§", "");
+			newName = newName.replaceAll("ï¿½", "");
 			newName = newName.replaceAll("&", "");
-			badgeText = badgeText.replaceAll("§", "&");
+			badgeText = badgeText.replaceAll("ï¿½", "&");
 			badgeText = badgeText.replaceAll("&k", "");
 			if (newName.length() >= 16 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
 
@@ -644,6 +650,10 @@ public class BadgeCommand extends CommandBase {
 			}
 
 			if (badge.canShareBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
+				if (!permissionCheck(SCSettings.PERMISSION_CREATE) && !badge.canRenameNow(SCSettings.getIntegerBase("rename_timeout_days", 7))) {
+					throw new SCException("This badge can only be renamed once every " + SCSettings.getIntegerBase("rename_timeout_days", 7)
+							+ " day(s). You can rename it again on " + getNextRenameTime(badge, SCSettings.getIntegerBase("rename_timeout_days", 7)) + ".");
+				}
 
 				Badge newBadge = SCSettings.badges.get(newName);
 				Badge badgeFromText = null;
@@ -750,6 +760,14 @@ public class BadgeCommand extends CommandBase {
 		
 		SCLog.debug("Failed: uuid:"+ senderUUID +"; cmd: "+command);
 		
+	}
+
+	private String getNextRenameTime(Badge badge, int timeoutDays) {
+		if (badge.getLastRename() == null) {
+			return "immediately";
+		}
+		Date nextTime = new Date(badge.getLastRename().getTime() + ((long) timeoutDays) * 24L * 60L * 60L * 1000L);
+		return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(nextTime);
 	}
 
 	@Override

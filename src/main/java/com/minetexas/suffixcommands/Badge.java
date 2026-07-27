@@ -2,6 +2,7 @@ package com.minetexas.suffixcommands;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class Badge extends SQLObject {
 	private String badgeText = "";
 	private String chatColor = "";
 	private String ownerUUID = "";
+	private Timestamp lastRename = null;
 	private ArrayList<String> leaderUUIDs = new ArrayList<String>();
 	private ArrayList<String> memberUUIDs = new ArrayList<String>();
 
@@ -48,6 +50,7 @@ public class Badge extends SQLObject {
 		} else {
 			SCLog.info(TABLE_NAME+" table OK!");
 		}
+		SQL.makeCol("lastRename", "datetime DEFAULT NULL", TABLE_NAME);
 	}
 	
 	public Badge(ResultSet rs) throws InvalidObjectException, SCException, SQLException, InvalidNameException {
@@ -62,6 +65,7 @@ public class Badge extends SQLObject {
 		this.setBadgeText(rs.getString("badgeText"));
 		this.setChatColor(rs.getString("chatColor"));
 		this.setOwnerUUID(rs.getString("ownerUUID"));
+		this.setLastRename(rs.getTimestamp("lastRename"));
 		this.loadLeaderUUIDs(rs.getString("leaderUUIDs"));
 		this.loadMemberUUIDs(rs.getString("memberUUIDs"));
 	}
@@ -79,6 +83,7 @@ public class Badge extends SQLObject {
 		hashmap.put("badgeText", this.getBadgeText());
 		hashmap.put("chatColor", this.getChatColor());
 		hashmap.put("ownerUUID", this.getOwnerUUID());
+		hashmap.put("lastRename", this.getLastRename());
 		hashmap.put("leaderUUIDs", this.saveUUIDs(this.leaderUUIDs));
 		hashmap.put("memberUUIDs", this.saveUUIDs(this.memberUUIDs));
 		SQL.updateNamedObject(this, hashmap, TABLE_NAME);
@@ -97,22 +102,29 @@ public class Badge extends SQLObject {
 		
 		this.setName(name);
 		this.setBadgeText(badgeText);
-		
+		this.markRenamedNow();
+		SCLog.info("Renamed badge: '"+oldName+"' -> '"+name+"'");
 		if (!oldBadgeText.equals(badgeText)) {
+			
+			SCLog.info("Badge Text is changed: '"+oldBadgeText+"' -> '"+badgeText+"'");
 			//Loop through all players who own the badge and are using the badge.
 			
 			for (String uuid : getAllPlayersWithAccess()) {
 				OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(UUID.fromString(uuid));
 				String playerName = player.getName();
-				if (playerName != null) {
+				SCLog.info("Checking player: "+playerName+" for badge text update from '"+oldBadgeText+"' to '"+badgeText+"'");
+				if (playerName == null || playerName.isEmpty()) {
+					continue;
+				}
+
 				PermissionUser user = PermissionsEx.getUser(playerName);
-					if (user != null) {
-						String suffix = user.getSuffix();
-						if (suffix.equals(" "+getBadgeText())) {
-							String clearSuffix = "pex user "+player+" suffix \""+badgeText+"\"";
-							Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
-						}
-					}
+				String suffix = (user != null) ? user.getSuffix() : null;
+				SCLog.info("Player: "+playerName+" has suffix: '"+suffix+"'");
+				boolean shouldUpdateSuffix = suffix.equals(oldBadgeText);
+				if (shouldUpdateSuffix) {
+					SCLog.info("Updating suffix for player: "+playerName+" from '"+oldBadgeText+"' to '"+badgeText+"'");
+					String updateSuffixCommand = "pex user " + playerName + " suffix \"" + badgeText + "\"";
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), updateSuffixCommand);
 				}
 			}
 			
@@ -151,6 +163,27 @@ public class Badge extends SQLObject {
 
 	public String getOwnerUUID() {
 		return ownerUUID;
+	}
+
+	public Timestamp getLastRename() {
+		return lastRename;
+	}
+
+	public void setLastRename(Timestamp lastRename) {
+		this.lastRename = lastRename;
+	}
+
+	public boolean canRenameNow(int timeoutDays) {
+		if (this.lastRename == null || timeoutDays <= 0) {
+			return true;
+		}
+
+		long timeoutMillis = ((long) timeoutDays) * 24L * 60L * 60L * 1000L;
+		return (System.currentTimeMillis() - this.lastRename.getTime()) >= timeoutMillis;
+	}
+
+	public void markRenamedNow() {
+		this.lastRename = new Timestamp(System.currentTimeMillis());
 	}
 	
 	public Boolean canUseBadge(String uuid) {

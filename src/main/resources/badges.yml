@@ -1,4 +1,5 @@
 ﻿#MySQL Configuration:
+rename_timeout_days: 7
 mysql:
    hostname: localhost
    port: '3306'

@@ -151,6 +151,13 @@ public class SCSettings {
 	public static int getIntegerBase(String path) throws InvalidConfiguration {
 		return getInteger(badgeConfig, path);
 	}
+
+	public static int getIntegerBase(String path, int defaultValue) {
+		if (!badgeConfig.contains(path)) {
+			return defaultValue;
+		}
+		return badgeConfig.getInt(path, defaultValue);
+	}
 	
 	public static String getString(FileConfiguration cfg, String path) throws InvalidConfiguration {
 		String data = cfg.getString(path);

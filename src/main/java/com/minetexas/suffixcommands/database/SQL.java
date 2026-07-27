@@ -44,7 +44,7 @@ public class SQL {
 		SQL.username = SCSettings.getStringBase("mysql.username");
 		SQL.password = SCSettings.getStringBase("mysql.password");
 		SQL.tb_prefix = SCSettings.getStringBase("mysql.table_prefix");
-		SQL.dsn = "jdbc:mysql://" + hostname + ":" + port + "/" + tb_prefix+db_name;
+		SQL.dsn = "jdbc:mysql://" + hostname + ":" + port + "/" + tb_prefix+db_name + "?allowPublicKeyRetrieval=true&useSSL=false";
 		SQL.min_conns = Integer.valueOf(SCSettings.getStringBase("mysql.min_conns"));
 		SQL.max_conns = Integer.valueOf(SCSettings.getStringBase("mysql.max_conns"));
 		SQL.parts = Integer.valueOf(SCSettings.getStringBase("mysql.parts"));

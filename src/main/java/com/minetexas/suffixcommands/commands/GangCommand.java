@@ -252,7 +252,7 @@ public class GangCommand extends CommandBase {
 
 			if (user != null) {
 				String suffix = user.getSuffix();
-				if (suffix.equals(" "+gang.getGangText())) {
+				if (suffix.equals(gang.getGangText())) {
 					String clearSuffix = "pex user "+sender.getName()+" prefix \""+ existingPlayerPrefix(user) + "\"";
 					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), clearSuffix);
 				}

@@ -1,6 +1,6 @@
 name: SuffixCommands
 main: com.minetexas.suffixcommands.SuffixCommands
-version: 0.10
+version: 0.15
 author: ataranlen
 description: Simple Badge Groups for User selectable pexPermission Suffixes
 
@@ -17,6 +17,10 @@ commands:
     description: Send a message to your badge group.
     permission: suffixcommands.badge.chat
     permission-message: You are not allowed to use this chat.
+  chattoggle:
+    description: Toggle badge chat spy
+    permission: suffixcommands.chat.spy
+    permission-message: You are not allowed to use this command.
   gang:
     description: Change your gang to one that you own.
     permission: suffixcommands.gang.set

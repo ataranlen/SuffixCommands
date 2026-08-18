@@ -13,6 +13,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 import com.minetexas.suffixcommands.Gang;
 import org.apache.commons.io.FileUtils;
@@ -44,6 +46,10 @@ public class SCSettings {
 	public static Map<String, ConfigBadges> legacyBadges = new HashMap<String, ConfigBadges>();
 
 	public static Map<String, Badge> badges = new HashMap<String, Badge>();
+	// Map of player UUID -> badge name for broadcast chat toggle via /bc
+	public static Map<String, String> bcToggles = new HashMap<String, String>();
+	// Set of player UUIDs who have enabled badge-chat spying
+	public static Set<String> spyToggles = new HashSet<String>();
 	public static Map<String, Gang> gangs = new HashMap<String, Gang>();
 	
 	public static void init(SuffixCommands plugin) throws FileNotFoundException, IOException, InvalidConfigurationException, InvalidConfiguration {

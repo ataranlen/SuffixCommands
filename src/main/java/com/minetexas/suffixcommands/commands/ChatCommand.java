@@ -37,6 +37,64 @@ public class ChatCommand extends CommandBase {
 		
 		permissionCheck();
 		
+		// Support toggle behavior for both /bc and /chat:
+		// - /bc or /chat with no args: toggle off
+		// - /bc <badge> or /chat <badge> (single arg) : enable badge-chat for that badge (unless the arg is a subcommand like 'list' or 'help')
+		// - /bc <badge> <message...> or /chat <badge> <message...> : send a one-off message (handled by parse_chat)
+		if (label != null && (label.equalsIgnoreCase("bc") || label.equalsIgnoreCase("chat"))) {
+			if (!(sender instanceof Player)) {
+				sendError(sender, "Only players can toggle badge chat.");
+				return true;
+			}
+			Player player = (Player) sender;
+			String playerUUID = player.getUniqueId().toString();
+			// No args -> toggle off
+			if (args.length == 0) {
+				if (SCSettings.bcToggles.remove(playerUUID) != null) {
+					sendMessage(sender, SCColor.Green + "Badge chat disabled.");
+				} else {
+					sendMessage(sender, SCColor.Yellow + "Badge chat is not enabled. Use /bc [badge] to enable.");
+				}
+				return true;
+			}
+			// Single arg -> possible toggle on (but skip if it's a subcommand like 'list' or 'help')
+			if (args.length == 1) {
+				String possible = args[0];
+				// don't treat known subcommands as toggle
+				if (possible.equalsIgnoreCase("help") || possible.equalsIgnoreCase("list") || commands.containsKey(possible.toLowerCase())) {
+					// fall through to normal handling below (parse_chat will handle list/help)
+				} else {
+					String badgeName = possible;
+					Badge badge = SCSettings.badges.get(badgeName);
+					if (badge == null) {
+						ConfigBadges legacyBadge = SCSettings.legacyBadges.get(badgeName);
+						if (legacyBadge == null) {
+							sendError(sender, "Invalid Badge Name. Use exact spelling and capitalization");
+							return true;
+						}
+						if (!player.hasPermission(SCSettings.PERMISSION_CHAT + legacyBadge.name)) {
+							sendMessage(sender, SCColor.Red + "You don't have access to the '" + legacyBadge.name
+								+ "' Badge Group.");
+							return true;
+						}
+						SCSettings.bcToggles.put(playerUUID, legacyBadge.name);
+						sendMessage(sender, SCColor.Green + "Badge chat enabled for '" + legacyBadge.name
+							+ "'. Use /bc or /chat with no args to turn it off.");
+						return true;
+					} else {
+						if (!badge.canUseBadge(playerUUID)) {
+							sendMessage(sender, SCColor.Red + "You don't have access to the '" + badge.getName() + "' Badge Group.");
+							return true;
+						}
+						SCSettings.bcToggles.put(playerUUID, badge.getName());
+						sendMessage(sender, SCColor.Green + "Badge chat enabled for '" + badge.getName()
+							+ "'. Use /bc or /chat with no args to turn it off.");
+						return true;
+					}
+				}
+			}
+		}
+		
 		if (args.length == 0) {
 			doDefaultAction();
 			return false;
@@ -47,7 +105,7 @@ public class ChatCommand extends CommandBase {
 			return true;
 		}
 		
-
+	
 		try {
 			parse_chat();
 			return true;
@@ -74,100 +132,46 @@ public class ChatCommand extends CommandBase {
 		Badge badge = SCSettings.badges.get(args[0]);
 		if (badge == null) {
 			ConfigBadges legacyBadge = SCSettings.legacyBadges.get(args[0]);
-			if (legacyBadge == null)
-			{
+			if (legacyBadge == null) {
 				throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
 			}
 			
-			if (permissionCheck(SCSettings.PERMISSION_CHAT+legacyBadge.name)) {			
-				StringBuilder builder = new StringBuilder();
-				String mainColor = ChatColor.translateAlternateColorCodes('&', legacyBadge.chatColor);
-				builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&', legacyBadge.badgeText)+mainColor+"]"+mainColor);
-				
-				args[0] = "";
-				
-				for(String s : args) {
-					if (s.length() >= 1) {
-						builder.append(" "+s);
-					}
+			StringBuilder builder = new StringBuilder();
+			args[0] = "";
+			
+			for(String s : args) {
+				if (s.length() >= 1) {
+					builder.append(" "+s);
 				}
-				
-				String message = builder.toString();
-				SCLog.info(message);
-
-				Collection <? extends Player> players = Bukkit.getOnlinePlayers();
-
-				Boolean useHerochat = false;
-				if (SCSettings.hasHerochat == true) {
-					Herochat hc = Herochat.getPlugin();
-					useHerochat = hc.isEnabled();
-				}
-				for(Player p : players) {
-					if (useHerochat) {
-						ChatterManager cm = Herochat.getChatterManager();
-						Player player = (Player) sender;
-						Chatter chatter = cm.getChatter(player);
-						Chatter chattee = cm.getChatter(p);
-						if (chattee.isIgnoring(chatter)) {
-							continue;
-						}
-					}
-					if (p.hasPermission(SCSettings.PERMISSION_CHAT+legacyBadge.name)) {
-						p.sendMessage(message);	
-					}
-				}
-				
-				
-				
-				
-			} else {
-				sendMessage(sender, SCColor.Red+"You don't have access to the '"+legacyBadge.name+"' Badge Group.");
+			}
+			
+			String message = builder.toString();
+			int rc = com.minetexas.suffixcommands.util.BadgeChatRouter.routeLegacyBadgeChat((Player) sender, legacyBadge, message.substring(message.indexOf(' ')+1));
+			if (rc == com.minetexas.suffixcommands.util.BadgeChatRouter.NOT_FOUND) {
+				throw new SCException("Invalid Badge Name. Use exact spelling and capitalization");
+			} else if (rc == com.minetexas.suffixcommands.util.BadgeChatRouter.NO_ACCESS) {
+				sendMessage(sender, SCColor.Red + "You don't have access to the '" + legacyBadge.name + "' Badge Group.");
+				return;
 			}
 		} else {
 			Player player = getPlayer();
 			String playerUUID = player.getUniqueId().toString();
-			if (badge.canUseBadge(playerUUID)) {			
-				StringBuilder builder = new StringBuilder();
-				String mainColor = ChatColor.translateAlternateColorCodes('&', badge.getChatColor());
-				builder.append(mainColor+"["+sender.getName()+ChatColor.translateAlternateColorCodes('&',  badge.getBadgeText())+mainColor+"]"+mainColor);
-				
-				args[0] = "";
-				
-				for(String s : args) {
-					if (s.length() >= 1) {
-						builder.append(" "+s);
-					}
-				}
-				
-				String message = builder.toString();
-				SCLog.info(message);
+			
+			StringBuilder builder = new StringBuilder();
 
-				Collection <? extends Player> players = Bukkit.getOnlinePlayers();
+			args[0] = "";
 
-				Boolean useHerochat = false;
-				if (SCSettings.hasHerochat == true) {
-					Herochat hc = Herochat.getPlugin();
-					useHerochat = hc.isEnabled();
+			for(String s : args) {
+				if (s.length() >= 1) {
+				    builder.append(" "+s);
 				}
-				for(Player p : players) {
-					if (useHerochat) {
-						ChatterManager cm = Herochat.getChatterManager();
-						Chatter chatter = cm.getChatter(player);
-						Chatter chattee = cm.getChatter(p);
-						if (chattee.isIgnoring(chatter)) {
-							continue;
-						}
-					}
-					if (badge.canUseBadge(p.getUniqueId().toString())) {
-						p.sendMessage(message);	
-					}
-				}
-				
-				
-				
-				
-			} else {
-				sendMessage(sender, SCColor.Red+"You don't have access to the '"+badge.getName()+"' Badge Group.");
+			}
+
+			String message = builder.toString();
+			int rc = com.minetexas.suffixcommands.util.BadgeChatRouter.routeBadgeChat((Player) sender, badge, message.substring(message.indexOf(' ')+1));
+			if (rc == com.minetexas.suffixcommands.util.BadgeChatRouter.NO_ACCESS) {
+				sendMessage(sender, SCColor.Red + "You don't have access to the '" + badge.getName() + "' Badge Group.");
+				return;
 			}
 		}
 	}

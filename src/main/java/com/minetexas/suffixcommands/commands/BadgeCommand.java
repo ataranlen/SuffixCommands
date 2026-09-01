@@ -5,12 +5,19 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.entity.Player;
 
@@ -27,6 +34,122 @@ import com.minetexas.suffixcommands.util.SCLog;
 import com.minetexas.suffixcommands.util.SCSettings;
 
 public class BadgeCommand extends CommandBase {
+	private static final long RENAME_CONFIRM_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(60);
+	private static final Map<String, PendingRename> PENDING_RENAMES = new HashMap<String, PendingRename>();
+
+	private static final class PendingRename {
+		private final String name;
+		private final String newName;
+		private final String badgeText;
+		private final long expiresAtMillis;
+
+		private PendingRename(String name, String newName, String badgeText, long expiresAtMillis) {
+			this.name = name;
+			this.newName = newName;
+			this.badgeText = badgeText;
+			this.expiresAtMillis = expiresAtMillis;
+		}
+
+		private boolean isExpired() {
+			return System.currentTimeMillis() > this.expiresAtMillis;
+		}
+	}
+
+	public static void queueRename(Player player, String name, String newName, String badgeText) {
+		String playerUUID = player.getUniqueId().toString();
+		PendingRename pending = new PendingRename(name, newName, badgeText, System.currentTimeMillis() + RENAME_CONFIRM_TIMEOUT_MS);
+		PENDING_RENAMES.put(playerUUID, pending);
+		sendPendingRenamePrompt(player, name, newName, badgeText);
+		Bukkit.getScheduler().runTaskLater(SCSettings.plugin, new Runnable() {
+			@Override
+			public void run() {
+				PendingRename timedOut = PENDING_RENAMES.remove(playerUUID);
+				if (timedOut == null) {
+					return;
+				}
+				Player onlinePlayer = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				if (onlinePlayer != null && onlinePlayer.isOnline()) {
+					sendMessage(onlinePlayer, SCColor.Red + "Rename timed out for '" + timedOut.name + "'. No changes were made.");
+				}
+			}
+		}, RENAME_CONFIRM_TIMEOUT_MS / 50L);
+	}
+
+	public static void sendPendingRenamePrompt(Player player, String name, String newName, String badgeText) {
+		TextComponent header = new TextComponent(getPendingRenamePreview(name, newName, badgeText));
+		header.setColor(net.md_5.bungee.api.ChatColor.GREEN);
+
+		TextComponent confirm = new TextComponent("[Confirm]");
+		confirm.setColor(net.md_5.bungee.api.ChatColor.GREEN);
+		confirm.setBold(true);
+		confirm.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/rename confirm"));
+		confirm.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+				new ComponentBuilder("Confirm this rename").color(net.md_5.bungee.api.ChatColor.GREEN).create()));
+
+		TextComponent cancel = new TextComponent("[Cancel]");
+		cancel.setColor(net.md_5.bungee.api.ChatColor.RED);
+		cancel.setBold(true);
+		cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/rename cancel"));
+		cancel.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+				new ComponentBuilder("Cancel this rename").color(net.md_5.bungee.api.ChatColor.RED).create()));
+
+		TextComponent lineBreak = new TextComponent("\n");
+		player.spigot().sendMessage(header, lineBreak, confirm, new TextComponent(" "), cancel);
+	}
+
+	public static String getPendingRenamePreview(String name, String newName, String badgeText) {
+		String formattedBadgeText = ChatColor.translateAlternateColorCodes('&', badgeText);
+		StringBuilder preview = new StringBuilder();
+		preview.append(SCColor.Green).append("Rename pending for '").append(name).append("'");
+		if (!name.equals(newName)) {
+			preview.append(" to '").append(newName).append("'");
+		}
+		preview.append(" with badge text '")
+				.append(formattedBadgeText)
+				.append(SCColor.Green)
+				.append("'. Click or Type /rename confirm within 60 seconds or /rename cancel to cancel.");
+		return preview.toString();
+	}
+
+	private static String getCancelRenameMessage(PendingRename pending) {
+		StringBuilder message = new StringBuilder();
+		message.append("Cancelled the pending rename of '").append(pending.name).append("'");
+		if (!pending.name.equals(pending.newName)) {
+			message.append(" to '").append(pending.newName).append("'");
+		}
+		message.append(".");
+		return message.toString();
+	}
+
+	public static void cancelPendingRename(Player player, CommandSender replyTo) {
+		String playerUUID = player.getUniqueId().toString();
+		PendingRename pending = PENDING_RENAMES.remove(playerUUID);
+		if (pending == null) {
+			sendMessage(replyTo, SCColor.Red + "You do not have a pending badge rename to cancel.");
+			return;
+		}
+		sendMessage(replyTo, SCColor.Green + getCancelRenameMessage(pending));
+	}
+
+	public static void confirmPendingRename(Player player, CommandSender replyTo) throws SCException {
+		String playerUUID = player.getUniqueId().toString();
+		PendingRename pending = PENDING_RENAMES.get(playerUUID);
+		if (pending == null) {
+			sendMessage(replyTo, SCColor.Red + "You do not have a pending badge rename to confirm.");
+			return;
+		}
+		if (pending.isExpired()) {
+			PENDING_RENAMES.remove(playerUUID);
+			sendMessage(replyTo, SCColor.Red + "Your pending badge rename expired after 60 seconds and was cancelled.");
+			sendMessage(replyTo, SCColor.Red + "Rename timed out for '" + pending.name + "'. No changes were made.");
+			return;
+		}
+		PENDING_RENAMES.remove(playerUUID);
+		BadgeCommand command = new BadgeCommand();
+		command.sender = replyTo;
+		command.args = new String[] { "rename", pending.name, pending.newName, pending.badgeText };
+		command.executeRename(player, pending.name, pending.newName, pending.badgeText, replyTo);
+	}
 
 	@Override
 	public void init() {
@@ -45,10 +168,9 @@ public class BadgeCommand extends CommandBase {
 		commands.put("members", "List all members of the named badge group");
 		commands.put("setowner", "Transfer Ownership of the badge. Usage: /badge setowner [badge] [newOwnerName]");
 		commands.put("create", "Create a new badge group. [Admin Only] Usage: /badge create [badge] [owner] [badgeText] [Chat Color Code]");
-		commands.put("rename", "Rename a badge group. Usage: /badge rename [badge] [newname] [badgeText]");
+		commands.put("rename", "Queue a badge rename for confirmation. Usage: /badge rename [badge] [newname] [badgeText] (then /rename confirm or /rename cancel)");
 		commands.put("delete", "Deletes a badge [Admin Only]");
 		commands.put("reload", "Reload Badges from the Config [Admin Only]");
-		commands.put("rerun", "Debug Command [Admin Only]");
 	}
 
 	public void set_cmd() throws SCException {
@@ -394,6 +516,36 @@ public class BadgeCommand extends CommandBase {
 		}
 	}
 
+	private boolean canShowTakeAction(Badge badge, String viewerUUID, String targetUUID) {
+		if (viewerUUID.equals(targetUUID)) {
+			return false;
+		}
+		if (badge.canShareBadge(viewerUUID)) {
+			return true;
+		}
+		if (!badge.canGiveBadge(viewerUUID)) {
+			return false;
+		}
+		return badge.isMember(targetUUID) && !badge.canShareBadge(targetUUID);
+	}
+
+	private void sendClickableTakeAction(Player player, String badgeName, String memberName, boolean allow) {
+		TextComponent member = new TextComponent(memberName);
+		member.setColor(net.md_5.bungee.api.ChatColor.WHITE);
+		if (!allow) {
+			player.spigot().sendMessage(member);
+			return;
+		}
+		TextComponent take = new TextComponent(" [Kick]");
+		take.setColor(net.md_5.bungee.api.ChatColor.RED);
+		take.setBold(true);
+		take.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+				"/badge take " + badgeName + " " + memberName));
+		take.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+				new ComponentBuilder("Remove " + memberName + " from the badge group").color(net.md_5.bungee.api.ChatColor.RED).create()));
+		player.spigot().sendMessage(member, take);
+	}
+
 	public void members_cmd() throws SCException {
 		if (args.length < 2) {
 			throw new SCException("Enter a group Badge Name");
@@ -411,27 +563,37 @@ public class BadgeCommand extends CommandBase {
 		String playerUUID = player.getUniqueId().toString();
 		if (badge.canUseBadge(playerUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			// List all players who have access to the badge group.
-			sendMessage(sender, SCColor.Green + "[Owner]: " + SCColor.ITALIC
-					+ Bukkit.getServer().getOfflinePlayer(UUID.fromString(badge.getOwnerUUID())).getName());
+			TextComponent ownerLabel = new TextComponent("[Owner]: ");
+			ownerLabel.setColor(net.md_5.bungee.api.ChatColor.GREEN);
+			TextComponent ownerName = new TextComponent(Bukkit.getServer().getOfflinePlayer(UUID.fromString(badge.getOwnerUUID())).getName());
+			ownerName.setColor(net.md_5.bungee.api.ChatColor.ITALIC);
+			player.spigot().sendMessage(ownerLabel, ownerName);
 
 			ArrayList<String> leaders = badge.getLeaderUUIDs();
 			if (!leaders.isEmpty()) {
-				String leaderString = SCColor.LightGreen + "[Leaders]: " + SCColor.ITALIC;
+				TextComponent leadersLabel = new TextComponent("[Leaders]: ");
+				leadersLabel.setColor(net.md_5.bungee.api.ChatColor.GREEN);
+				player.spigot().sendMessage(leadersLabel);
 				for (String uuidString : leaders) {
-					leaderString += Bukkit.getServer().getOfflinePlayer(UUID.fromString(uuidString)).getName() + ", ";
+					String memberName = Bukkit.getServer().getOfflinePlayer(UUID.fromString(uuidString)).getName();
+					if (memberName != null) {
+						sendClickableTakeAction(player, badge.getName(), memberName,
+							canShowTakeAction(badge, playerUUID, uuidString));
+					}
 				}
-
-				sendMessage(sender, leaderString);
 			}
 			ArrayList<String> members = badge.getMemberUUIDs();
 			if (!members.isEmpty()) {
-				String memberString = SCColor.White + "[Members]: " + SCColor.ITALIC;
-
+				TextComponent membersLabel = new TextComponent("[Members]: ");
+				membersLabel.setColor(net.md_5.bungee.api.ChatColor.GREEN);
+				player.spigot().sendMessage(membersLabel);
 				for (String uuidString : badge.getMemberUUIDs()) {
-					memberString += Bukkit.getServer().getOfflinePlayer(UUID.fromString(uuidString)).getName() + ", ";
-
+					String memberName = Bukkit.getServer().getOfflinePlayer(UUID.fromString(uuidString)).getName();
+					if (memberName != null) {
+						sendClickableTakeAction(player, badge.getName(), memberName,
+							canShowTakeAction(badge, playerUUID, uuidString));
+					}
 				}
-				sendMessage(sender, memberString);
 			}
 		} else {
 			sendMessage(sender, SCColor.Red + "You don't have 'use' access to the " + badge.getName() + " Badge.");
@@ -501,6 +663,14 @@ public class BadgeCommand extends CommandBase {
 	}
 
 	public void rename_cmd() throws SCException {
+		if (args.length == 2 && args[1].equalsIgnoreCase("confirm")) {
+			confirmPendingRename(getPlayer(), sender);
+			return;
+		}
+		if (args.length == 2 && args[1].equalsIgnoreCase("cancel")) {
+			cancelPendingRename(getPlayer(), sender);
+			return;
+		}
 		if (args.length < 2) {
 			throw new SCException("Enter a Badge Name");
 		} else if (args.length < 3) {
@@ -513,24 +683,21 @@ public class BadgeCommand extends CommandBase {
 		String name = args[1];
 		String newName = args[2];
 		String badgeText = args[3];
+		this.validateRenameInputs(name, newName, badgeText);
 
+		Player player = getPlayer();
+		queueRename(player, name, newName, badgeText);
+	}
+
+	private void executeRename(Player player, String name, String newName, String badgeText, CommandSender replyTo) throws SCException {
+		String playerUUID = player.getUniqueId().toString();
 		newName = newName.replaceAll("�", "");
 		newName = newName.replaceAll("&", "");
 		badgeText = badgeText.replaceAll("�", "&");
 		badgeText = badgeText.replaceAll("&k", "");
-		if (newName.length() >= 16 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
+		this.validateRenameInputs(name, newName, badgeText);
 
-			throw new SCException("Please limit your New name to 10 characters.");
-		}
-		if (badgeText.length() >= 20 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
-
-			throw new SCException("Please limit your displayText to 12 characters.");
-		}
-
-		Player player = getPlayer();
-		String playerUUID = player.getUniqueId().toString();
-
-		Badge badge = SCSettings.badges.get(args[1]);
+		Badge badge = SCSettings.badges.get(name);
 		if (badge == null) {
 			throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization");
 		}
@@ -538,7 +705,7 @@ public class BadgeCommand extends CommandBase {
 		if (badge.canShareBadge(playerUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			if (!permissionCheck(SCSettings.PERMISSION_CREATE) && !badge.canRenameNow(SCSettings.getIntegerBase("rename_timeout_days", 7))) {
 				throw new SCException("This badge can only be renamed once every " + SCSettings.getIntegerBase("rename_timeout_days", 7)
-						+ " day(s). You can rename it again on " + getNextRenameTime(badge, SCSettings.getIntegerBase("rename_timeout_days", 7)) + ".");
+							+ " day(s). You can rename it again on " + getNextRenameTime(badge, SCSettings.getIntegerBase("rename_timeout_days", 7)) + ".");
 			}
 
 			Badge newBadge = SCSettings.badges.get(newName);
@@ -550,16 +717,17 @@ public class BadgeCommand extends CommandBase {
 				if (b.getBadgeText().equals(badgeText)) {
 					badgeFromText = b;
 					break;
-				}   
+				}
 			}
 			if ((newBadge == null && badgeFromText == null) || name.equals(newName)) {
 				try {
 					badge.rename(newName, " " + badgeText);
 					SCLog.debug("Done: senderName:"+ playerUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
-					sendMessage(sender,
+					String updatedBadgeText = ChatColor.translateAlternateColorCodes('&', badgeText);
+					sendMessage(replyTo,
 							SCColor.Green + "'" + name + "' has been renamed to '" + newName
 									+ "' with the badgeText of '"
-									+ ChatColor.translateAlternateColorCodes('&', badgeText) + SCColor.Green + "'");
+									+ updatedBadgeText + SCColor.Green + "'");
 				} catch (InvalidNameException e) {
 					SCLog.exception("Badge Save failed", e);
 					SCLog.debug("Error: senderName:"+ playerUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
@@ -569,6 +737,22 @@ public class BadgeCommand extends CommandBase {
 				SCLog.debug("Error: senderName:"+ playerUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
 				throw new SCException("Badge already exists");
 			}
+		}
+	}
+
+	private void validateRenameInputs(String name, String newName, String badgeText) throws SCException {
+		String cleanNewName = newName.replaceAll("�", "");
+		cleanNewName = cleanNewName.replaceAll("&", "");
+		String cleanBadgeText = badgeText.replaceAll("�", "&");
+		cleanBadgeText = cleanBadgeText.replaceAll("&k", "");
+		int cleanNewNameLength = cleanNewName.codePointCount(0, cleanNewName.length());
+		if (cleanNewNameLength >= 12 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
+			throw new SCException("Please limit your new name to 12 characters.");
+		}
+		String visibleNewName = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', cleanBadgeText));
+		int visibleNewNameLength = visibleNewName.codePointCount(0, visibleNewName.length());
+		if (visibleNewNameLength > 12 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
+			throw new SCException("Please limit your badge text to 12 characters (excluding color codes). Your badge text '" + visibleNewName + "' is currently " + visibleNewNameLength + " characters long.");
 		}
 	}
 	
@@ -609,159 +793,6 @@ public class BadgeCommand extends CommandBase {
 		}
 	}
 	
-	public void rerun_cmd() throws SCException {
-		String senderUUID = args[1];
-
-		args[0] = "";
-		args[1] = "";
-		String commandType = args[2].toLowerCase();
-		
-		if (commandType.equals("rename")) {
-			if (args.length < 6) {
-				throw new SCException("Missing Badge Display name");
-			} else if (args.length > 6) {
-				throw new SCException("Invalid Badge Name.");
-			}
-			
-			String name = args[3];
-			String newName = args[4];
-			String badgeText = args[5];
-
-			newName = newName.replaceAll("�", "");
-			newName = newName.replaceAll("&", "");
-			badgeText = badgeText.replaceAll("�", "&");
-			badgeText = badgeText.replaceAll("&k", "");
-			if (newName.length() >= 16 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
-
-				SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
-				throw new SCException("Please limit your New name to 10 characters.");
-			}
-			if (badgeText.length() >= 20 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
-
-				SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
-				throw new SCException("Please limit your displayText to 12 characters.");
-			}
-
-
-			Badge badge = SCSettings.badges.get(args[1]);
-			if (badge == null) {
-				SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
-				throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization");
-			}
-
-			if (badge.canShareBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
-				if (!permissionCheck(SCSettings.PERMISSION_CREATE) && !badge.canRenameNow(SCSettings.getIntegerBase("rename_timeout_days", 7))) {
-					throw new SCException("This badge can only be renamed once every " + SCSettings.getIntegerBase("rename_timeout_days", 7)
-							+ " day(s). You can rename it again on " + getNextRenameTime(badge, SCSettings.getIntegerBase("rename_timeout_days", 7)) + ".");
-				}
-
-				Badge newBadge = SCSettings.badges.get(newName);
-				Badge badgeFromText = null;
-			
-				Map<String, Badge> badges = SCSettings.badges;
-				for (String key : badges.keySet()) {
-				    Badge b = badges.get(key);
-					if (b.getBadgeText().equals(badgeText)) {
-						badgeFromText = b;
-						break;
-					}   
-				}
-				if ((newBadge == null && badgeFromText == null) || name.equals(newName)) {
-					try {
-						badge.rename(newName, " " + badgeText);
-						SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
-						sendMessage(sender,
-								SCColor.Green + "'" + name + "' has been renamed to '" + newName
-										+ "' with the badgeText of '"
-										+ ChatColor.translateAlternateColorCodes('&', badgeText) + SCColor.Green + "'");
-					} catch (InvalidNameException e) {
-						SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
-						throw new SCException("Badge save failed, Contact an admin.");
-					}
-				} else {
-					SCLog.debug("Error: senderName:"+ senderUUID +"; cmd: rename " + name + " " + newName + " " + badgeText);
-					throw new SCException("Badge already exists");
-				}
-			}
-			return;
-		}
-		
-		String playerUUID = args[4];
-		StringBuilder builder = new StringBuilder();
-		builder.append("badge");
-		for(String s : args) {
-			if (s.length() >= 1) {
-				builder.append(" "+s);
-			}
-		}
-		
-
-		Badge badge = SCSettings.badges.get(args[3]);
-		if (badge == null) {
-			throw new SCException("Badge Not Found");
-		}
-
-		
-		if (senderUUID.equals(playerUUID)) {
-			throw new SCException("Same Player");
-		}
-
-		String command = builder.toString();
-		if (commandType.equals("give")) {
-			if (badge.canGiveBadge(senderUUID)) {
-				if (badge.canUseBadge(playerUUID)) {
-					throw new SCException(playerUUID + " already has 'use' access to the '" + badge.getName() + "' Badge Group.");
-				}
-				badge.addMemberUUID(playerUUID);
-				SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: "+command);
-
-			} else {
-				throw new SCException("Player missing permission");
-			}
-			return;
-		}
-		if (commandType.equals("take")) {
-			if (badge.canShareBadge(senderUUID) && badge.canGiveBadge(playerUUID)) {
-				sendMessage(sender, SCColor.Green + "Removed " + playerUUID + " 'give' access to the '"
-						+ badge.getName() + "' Badge Group");
-
-				badge.removeLeaderUUID(playerUUID);
-				SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: "+command);
-
-			} else if (badge.canGiveBadge(senderUUID)) {
-				if (badge.canShareBadge(playerUUID)) {
-					throw new SCException("You cannot remove the owner from the '" + badge.getName() + "' Badge Group.");
-				} else if (badge.canGiveBadge(playerUUID)) {
-					throw new SCException("You cannot remove another Leader from the '" + badge.getName() + "' Badge Group.");
-				}
-
-				badge.removeMemberUUID(playerUUID);
-				SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: "+command);
-			} else {
-				throw new SCException("Player missing permission");
-			}
-			return;
-		}
-
-		if (commandType.equals("share")) {
-			if (badge.canGiveBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
-				if (badge.canGiveBadge(playerUUID)) {
-					throw new SCException(
-							playerUUID + " already has 'give' access to the '" + badge.getName() + "' Badge Group.");
-				}
-
-				badge.addLeaderUUID(playerUUID);
-				SCLog.debug("Done: senderName:"+ senderUUID +"; cmd: "+command);
-			} else {
-				throw new SCException("Player missing permission");
-			}
-			return;
-		}
-		
-		SCLog.debug("Failed: uuid:"+ senderUUID +"; cmd: "+command);
-		
-	}
-
 	private String getNextRenameTime(Badge badge, int timeoutDays) {
 		if (badge.getLastRename() == null) {
 			return "immediately";

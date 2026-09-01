@@ -11,6 +11,7 @@ import com.minetexas.suffixcommands.commands.BadgeCommand;
 import com.minetexas.suffixcommands.commands.ChatCommand;
 import com.minetexas.suffixcommands.commands.ChattoggleCommand;
 import com.minetexas.suffixcommands.commands.BadgeChatListener;
+import com.minetexas.suffixcommands.commands.RenameCommand;
 import com.minetexas.suffixcommands.database.SQL;
 import com.minetexas.suffixcommands.database.SQLUpdate;
 import com.minetexas.suffixcommands.exception.InvalidConfiguration;
@@ -38,6 +39,7 @@ public class SuffixCommands extends JavaPlugin {
 
 		this.getCommand("badge").setExecutor(new BadgeCommand());
 		this.getCommand("gang").setExecutor(new GangCommand());
+		this.getCommand("rename").setExecutor(new RenameCommand());
 		this.getCommand("chat").setExecutor(new ChatCommand());
 		this.getCommand("bc").setExecutor(new ChatCommand());
 		this.getCommand("chattoggle").setExecutor(new ChattoggleCommand());

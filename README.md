@@ -22,7 +22,9 @@ If you want to see it in action, join anarchy.minetexas.com
 * /badge list - List all Legacy badges
 * /badge members [name] - List all members of a group badges
 * /badge create [name] [owner] [badgeText] [ColorCode] - "Create a new badge group. [Admin Only]
-* /badge rename [name] [newName] [badgeText] - Rename a badge group.
+* /badge rename [name] [newName] [badgeText] - Queue a badge rename for confirmation.
+* /rename confirm - Confirm the queued badge rename within 5 minutes.
+* /rename cancel - Cancel the queued badge rename.
 * /badge reload - Reload from the badges.yml [OP/Console only]
 * /chat [name] [message] - Send a chat message to all players with permissions to chat for the named badge.
 * /bc [name] [message] - Same as /chat

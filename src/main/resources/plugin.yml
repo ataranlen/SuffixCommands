@@ -1,6 +1,6 @@
 name: SuffixCommands
 main: com.minetexas.suffixcommands.SuffixCommands
-version: 0.15
+version: 0.16
 author: ataranlen
 description: Simple Badge Groups for User selectable pexPermission Suffixes
 
@@ -25,3 +25,7 @@ commands:
     description: Change your gang to one that you own.
     permission: suffixcommands.gang.set
     permission-message: You are not allowed to change your own gang
+  rename:
+    description: Rename a badge after confirmation.
+    permission: suffixcommands.badge.rename
+    permission-message: You are not allowed to rename badges.

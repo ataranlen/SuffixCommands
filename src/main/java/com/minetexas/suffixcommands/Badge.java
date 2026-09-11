@@ -91,8 +91,26 @@ public class Badge extends SQLObject {
 
 	@Override
 	public void delete() throws SQLException {
-		// TODO Remove the badge from all users
 		SQL.deleteNamedObject(this, TABLE_NAME);
+		SCSettings.badges.remove(this.getName(), this);
+		SCSettings.bcToggles.values().removeIf(this.getName()::equals);
+
+		for (String uuid : getAllPlayersWithAccess()) {
+			try {
+				OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(UUID.fromString(uuid));
+				String playerName = player.getName();
+				if (playerName == null || playerName.isEmpty()) {
+					continue;
+				}
+				PermissionUser user = PermissionsEx.getUser(playerName);
+				if (user != null && this.getBadgeText().equals(user.getSuffix())) {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(),
+							"pex user " + playerName + " suffix \"\"");
+				}
+			} catch (IllegalArgumentException e) {
+				SCLog.warning("Skipping invalid UUID while deleting badge '" + this.getName() + "': " + uuid);
+			}
+		}
 	}
 	
 	public void rename(String name, String badgeText) throws SCException, InvalidNameException {
@@ -187,15 +205,15 @@ public class Badge extends SQLObject {
 	}
 	
 	public Boolean canUseBadge(String uuid) {
-		return (this.getOwnerUUID().equals(uuid) || this.isLeader(uuid) || this.isMember(uuid));
+		return !this.isDeleted() && (this.getOwnerUUID().equals(uuid) || this.isLeader(uuid) || this.isMember(uuid));
 	}
 	
 	public Boolean canGiveBadge(String uuid) {
-		return (this.getOwnerUUID().equals(uuid) || this.isLeader(uuid));
+		return !this.isDeleted() && (this.getOwnerUUID().equals(uuid) || this.isLeader(uuid));
 	}
 	
 	public Boolean canShareBadge(String uuid) {
-		return this.getOwnerUUID().equals(uuid);
+		return !this.isDeleted() && this.getOwnerUUID().equals(uuid);
 	}
 	
 	public ArrayList<String> getAllPlayersWithAccess() {
@@ -293,8 +311,8 @@ public class Badge extends SQLObject {
 		this.ownerUUID = ownerUUID;
 		if (isLeader(ownerUUID).booleanValue()) {
 			removeLeaderUUID(ownerUUID); 
-			addLeaderUUID(oldOwner);
-			saveNow();
 		}
+		addLeaderUUID(oldOwner);
+		saveNow();
 	}
 }

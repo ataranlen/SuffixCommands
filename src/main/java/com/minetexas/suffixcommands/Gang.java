@@ -13,6 +13,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+import ru.tehkode.permissions.PermissionUser;
+import ru.tehkode.permissions.bukkit.PermissionsEx;
+
 public class Gang extends SQLObject {
 	private String gangText = "";
 	private String ownerUUID = "";
@@ -74,8 +79,26 @@ public class Gang extends SQLObject {
 
 	@Override
 	public void delete() throws SQLException {
-		// TODO Remove the gang from all users
 		SQL.deleteNamedObject(this, TABLE_NAME);
+		SCSettings.gangs.remove(this.getName(), this);
+
+		for (String uuid : getAllPlayersWithAccess()) {
+			try {
+				OfflinePlayer player = SCSettings.plugin.getServer().getOfflinePlayer(java.util.UUID.fromString(uuid));
+				String playerName = player.getName();
+				if (playerName == null || playerName.isEmpty()) {
+					continue;
+				}
+				PermissionUser user = PermissionsEx.getUser(playerName);
+				if (user != null && user.getPrefix() != null && user.getPrefix().contains(this.getGangText())) {
+					Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(),
+							"pex user " + playerName + " prefix \""
+									+ user.getPrefix().replace(this.getGangText(), "") + "\"");
+				}
+			} catch (IllegalArgumentException e) {
+				SCLog.warning("Skipping invalid UUID while deleting gang '" + this.getName() + "': " + uuid);
+			}
+		}
 	}
 
 	public void rename(String name, String gangText) throws SCException, InvalidNameException {
@@ -113,15 +136,15 @@ public class Gang extends SQLObject {
 	}
 	
 	public Boolean canUseGang(String uuid) {
-		return (this.getOwnerUUID().equals(uuid) || this.isLeader(uuid) || this.isMember(uuid));
+		return !this.isDeleted() && (this.getOwnerUUID().equals(uuid) || this.isLeader(uuid) || this.isMember(uuid));
 	}
 	
 	public Boolean canGiveGang(String uuid) {
-		return (this.getOwnerUUID().equals(uuid) || this.isLeader(uuid));
+		return !this.isDeleted() && (this.getOwnerUUID().equals(uuid) || this.isLeader(uuid));
 	}
 	
 	public Boolean canShareGang(String uuid) {
-		return this.getOwnerUUID().equals(uuid);
+		return !this.isDeleted() && this.getOwnerUUID().equals(uuid);
 	}
 	
 	public ArrayList<String> getAllPlayersWithAccess() {

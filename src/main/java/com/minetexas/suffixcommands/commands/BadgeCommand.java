@@ -82,14 +82,14 @@ public class BadgeCommand extends CommandBase {
 		TextComponent confirm = new TextComponent("[Confirm]");
 		confirm.setColor(net.md_5.bungee.api.ChatColor.GREEN);
 		confirm.setBold(true);
-		confirm.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/rename confirm"));
+		confirm.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/badge rename confirm"));
 		confirm.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 				new ComponentBuilder("Confirm this rename").color(net.md_5.bungee.api.ChatColor.GREEN).create()));
 
 		TextComponent cancel = new TextComponent("[Cancel]");
 		cancel.setColor(net.md_5.bungee.api.ChatColor.RED);
 		cancel.setBold(true);
-		cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/rename cancel"));
+		cancel.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/badge rename cancel"));
 		cancel.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
 				new ComponentBuilder("Cancel this rename").color(net.md_5.bungee.api.ChatColor.RED).create()));
 
@@ -107,7 +107,7 @@ public class BadgeCommand extends CommandBase {
 		preview.append(" with badge text '")
 				.append(formattedBadgeText)
 				.append(SCColor.Green)
-				.append("'. Click or Type /rename confirm within 60 seconds or /rename cancel to cancel.");
+				.append("'. Click or Type /badge rename confirm within 60 seconds or /badge rename cancel to cancel.");
 		return preview.toString();
 	}
 
@@ -168,7 +168,7 @@ public class BadgeCommand extends CommandBase {
 		commands.put("members", "List all members of the named badge group");
 		commands.put("setowner", "Transfer Ownership of the badge. Usage: /badge setowner [badge] [newOwnerName]");
 		commands.put("create", "Create a new badge group. [Admin Only] Usage: /badge create [badge] [owner] [badgeText] [Chat Color Code]");
-		commands.put("rename", "Queue a badge rename for confirmation. Usage: /badge rename [badge] [newname] [badgeText] (then /rename confirm or /rename cancel)");
+		commands.put("rename", "Queue a badge rename for confirmation. Usage: /badge rename [badge] [newname] [badgeText] (then /badge rename confirm or /badge rename cancel)");
 		commands.put("delete", "Deletes a badge [Admin Only]");
 		commands.put("reload", "Reload Badges from the Config [Admin Only]");
 	}
@@ -296,8 +296,7 @@ public class BadgeCommand extends CommandBase {
 
 		if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			if (badge.canGiveBadge(playerUUID)) {
-				throw new SCException(
-						playerName + " already has 'give' access to the '" + badge.getName() + "' Badge Group.");
+				throw new SCException(playerName + " already has 'give' access to the '" + badge.getName() + "' Badge Group.");
 			}
 
 			badge.addLeaderUUID(playerUUID);
@@ -312,7 +311,7 @@ public class BadgeCommand extends CommandBase {
 			throw new SCException("You cannot add yourself to the '" + badge.getName() + "' Badge Group.");
 		}
 
-		if (badge.canGiveBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
+		if (badge.canShareBadge(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			if (badge.canGiveBadge(playerUUID)) {
 				throw new SCException(
 						playerName + " already has 'give' access to the '" + badge.getName() + "' Badge Group.");
@@ -322,8 +321,7 @@ public class BadgeCommand extends CommandBase {
 			sendMessage(sender, SCColor.LightGreen + playerName + " was given 'give' access to the '" + badge.getName()
 					+ "' Badge Group.");
 		} else {
-			sendMessage(sender,
-					SCColor.Red + "You don't have 'share' access to the '" + badge.getName() + "' Badge Group.");
+			throw new SCException("You don't have 'share' access to the '" + badge.getName() + "' Badge Group.");
 		}
 
 	}
@@ -365,16 +363,14 @@ public class BadgeCommand extends CommandBase {
 			if (badge.canShareBadge(playerUUID)) {
 				throw new SCException("You cannot remove the owner from the '" + badge.getName() + "' Badge Group.");
 			} else if (badge.canGiveBadge(playerUUID)) {
-				throw new SCException(
-						"You cannot remove another Leader from the '" + badge.getName() + "' Badge Group.");
+				throw new SCException("You cannot remove another Leader from the '" + badge.getName() + "' Badge Group.");
 			}
 			sendMessage(sender, SCColor.Green + "Removed " + player.getName() + "'s 'use' access to the '"
 					+ badge.getName() + "' Badge Group");
 
 			badge.removeMemberUUID(playerUUID);
 		} else {
-			sendMessage(sender,
-					SCColor.Red + "You don't have 'share' access to the '" + badge.getName() + "' Badge Group.");
+			throw new SCException("You don't have 'share' access to the '" + badge.getName() + "' Badge Group.");
 		}
 
 		PermissionUser user = PermissionsEx.getUser(playerName);
@@ -517,13 +513,13 @@ public class BadgeCommand extends CommandBase {
 	}
 
 	private boolean canShowTakeAction(Badge badge, String viewerUUID, String targetUUID) {
-		if (viewerUUID.equals(targetUUID)) {
+		if (viewerUUID.equals(targetUUID)) { // If user is self, no kick
 			return false;
 		}
-		if (badge.canShareBadge(viewerUUID)) {
+		if (badge.canShareBadge(viewerUUID)) { // If user is owner, can kick anyone
 			return true;
 		}
-		if (!badge.canGiveBadge(viewerUUID)) {
+		if (!badge.canGiveBadge(viewerUUID)) { // If user is not a leader, cannot kick anyone
 			return false;
 		}
 		return badge.isMember(targetUUID) && !badge.canShareBadge(targetUUID);
@@ -695,6 +691,7 @@ public class BadgeCommand extends CommandBase {
 		newName = newName.replaceAll("&", "");
 		badgeText = badgeText.replaceAll("�", "&");
 		badgeText = badgeText.replaceAll("&k", "");
+		badgeText = badgeText.replaceAll("&K", "");
 		this.validateRenameInputs(name, newName, badgeText);
 
 		Badge badge = SCSettings.badges.get(name);
@@ -710,11 +707,16 @@ public class BadgeCommand extends CommandBase {
 
 			Badge newBadge = SCSettings.badges.get(newName);
 			Badge badgeFromText = null;
+
+			String cleanBadgeText = badgeText.replaceAll("�", "&");
+			String visibleNewName = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', cleanBadgeText));
 		
 			Map<String, Badge> badges = SCSettings.badges;
 			for (String key : badges.keySet()) {
 			    Badge b = badges.get(key);
-				if (b.getBadgeText().equals(badgeText)) {
+				String bCleanBadgeText = b.getBadgeText().replaceAll("�", "&");
+				String bVisibleName = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', bCleanBadgeText));
+				if (bVisibleName.equals(visibleNewName)) {
 					badgeFromText = b;
 					break;
 				}
@@ -745,8 +747,13 @@ public class BadgeCommand extends CommandBase {
 		cleanNewName = cleanNewName.replaceAll("&", "");
 		String cleanBadgeText = badgeText.replaceAll("�", "&");
 		cleanBadgeText = cleanBadgeText.replaceAll("&k", "");
+		cleanBadgeText = cleanBadgeText.replaceAll("&K", "");
+		int fullNewNameLength = newName.codePointCount(0, newName.length());
+		if (fullNewNameLength >= 64) {
+			throw new SCException("Please limit your new name to 64 characters. (Including color codes) Your new name '" + newName + "' is currently " + fullNewNameLength + " characters long.");
+		}
 		int cleanNewNameLength = cleanNewName.codePointCount(0, cleanNewName.length());
-		if (cleanNewNameLength >= 12 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
+		if (cleanNewNameLength > 12 && !permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			throw new SCException("Please limit your new name to 12 characters.");
 		}
 		String visibleNewName = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', cleanBadgeText));
@@ -773,7 +780,7 @@ public class BadgeCommand extends CommandBase {
 		Badge badge = (Badge)SCSettings.badges.get(this.args[1]);
 		if (badge == null)
 			throw new SCException("Invalid Group Badge Name. Use exact spelling and capitalization"); 
-		if (badge.canShareBadge(playerUUID).booleanValue() || permissionCheck("suffixcommands.createbadges").booleanValue())
+		if (badge.canShareBadge(playerUUID).booleanValue() || permissionCheck(SCSettings.PERMISSION_CREATE).booleanValue())
 		  try {
 		    badge.changeHands(newplayerUUID);
 			sendMessage(sender, SCColor.Green+"Changed owner of '"+badge.getName()+"' Gang to '" + newPlayer.getName());
@@ -784,6 +791,10 @@ public class BadgeCommand extends CommandBase {
 
 	public void reload_cmd() throws SCException {
 		try {
+			if (permissionCheck(SCSettings.PERMISSION_CREATE)) {
+				throw new SCException("You must be an Admin to do this"); 
+			}
+
 			SCSettings.reloadBadgeConfigFile();
 			sendMessage(sender, "Badges reloaded");
 		} catch (IOException | InvalidConfigurationException | InvalidConfiguration e) {
@@ -809,7 +820,7 @@ public class BadgeCommand extends CommandBase {
 
 	public void delete_cmd() throws SCException {
 		try {
-			if (!permissionCheck(SCSettings.BADGE))
+			if (!permissionCheck(SCSettings.PERMISSION_CREATE))
 	            throw new SCException("You must be an Admin to do this"); 
 	        if (this.args.length != 2)
 	            throw new SCException("Enter a group Badge Name"); 

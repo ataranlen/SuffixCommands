@@ -156,7 +156,7 @@ public class GangCommand extends CommandBase {
 			throw new SCException("You cannot add yourself to the '"+gang.getName()+"' Gang.");
 		}
 
-		if (gang.canGiveGang(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
+		if (gang.canShareGang(senderUUID) || permissionCheck(SCSettings.PERMISSION_CREATE)) {
 			if (gang.canGiveGang(playerUUID)) {
 				throw new SCException(playerName+" already has 'give' access to the '"+gang.getName()+"' Gang.");
 			}

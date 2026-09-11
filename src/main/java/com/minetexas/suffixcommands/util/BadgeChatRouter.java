@@ -84,7 +84,7 @@ public class BadgeChatRouter {
 	 * Routes a new-style badge chat message (Badge) to recipients and spies.
 	 */
 	public static int routeBadgeChat(final Player sender, final Badge badge, final String messageText) {
-		if (badge == null) return NOT_FOUND;
+		if (badge == null || badge.isDeleted()) return NOT_FOUND;
 		String playerUUID = sender.getUniqueId().toString();
 		if (!badge.canUseBadge(playerUUID) && !sender.isOp()) {
 			return NO_ACCESS;

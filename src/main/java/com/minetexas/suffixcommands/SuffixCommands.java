@@ -22,6 +22,7 @@ public class SuffixCommands extends JavaPlugin {
 
 	public static boolean isDisable = false;
 	public void onEnable() {
+		isDisable = false;
 		
 
 		SCLog.init(this);
@@ -34,6 +35,9 @@ public class SuffixCommands extends JavaPlugin {
 				| InvalidConfiguration e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+		if (SQL.badgeDatabase != null) {
+			SQLUpdate.start(this);
 		}
 		
 
@@ -52,8 +56,10 @@ public class SuffixCommands extends JavaPlugin {
 		super.onDisable();
 		SCLog.info("onDisable has been invoked!");
 		isDisable = true;
-		SQLUpdate.save();
-		SQL.badgeDatabase.shutdown();
+		SQLUpdate.stopAndFlush();
+		if (SQL.badgeDatabase != null) {
+			SQL.badgeDatabase.shutdown();
+		}
 	}
 	
 	public boolean hasPlugin(String name) {
